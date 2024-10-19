@@ -90,10 +90,10 @@ async fn scan_for_flex_sensor_glove(device_name: &str, verbose: bool) -> anyhow:
         let properties = peripheral.properties().await?.unwrap();
 
         if verbose {
-            print_info(&format!("Found device: {:?}", properties));
+            print_info(&format!("Found device: {:?}", properties.local_name));
         }
 
-        if properties.local_name == Some("FlexSensorGlove".into()) {
+        if properties.local_name == Some(device_name.into()) {
             adapter.stop_scan().await?;
             return Ok(peripheral);
         }
@@ -110,7 +110,7 @@ async fn find_central(verbose: bool) -> anyhow::Result<Adapter> {
     }
 
     if verbose {
-        print_info(&format!("Found adapters: {:?}", adapter_list));
+        print_info(&format!("Found adapters {}", adapter_list.len()));
     }
 
     Ok(adapter_list[0].clone())
