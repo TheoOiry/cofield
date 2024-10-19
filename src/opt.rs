@@ -7,6 +7,9 @@ pub struct Opt {
 
     #[arg(long, short, default_value = "FlexSensorGlove")]
     pub device_name: String,
+
+    #[arg(long, short, default_value = "false")]
+    pub verbose: bool,
 }
 
 #[derive(Copy, Clone, Default, ValueEnum)]
