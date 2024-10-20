@@ -15,8 +15,10 @@ mod opt;
 mod output;
 mod parser;
 
-const FLEX_SENSOR_GLOVE_SERVICE_UUID: Uuid =
+const _FLEX_SENSOR_GLOVE_SERVICE_UUID: Uuid =
     Uuid::from_u128(0xf5874094_9074_4bb6_9257_f3593d73d836);
+
+const FLEX_SENSOR_GLOVE_CHAR_UUID: Uuid = Uuid::from_u128(0xa81ed63c_cf54_4742_a27a_f398228acd90);
 
 #[tokio::main]
 async fn main() {
@@ -71,14 +73,20 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn scan_for_flex_sensor_glove(device_name: &str, verbose: bool) -> anyhow::Result<PlatformPeripheral> {
+async fn scan_for_flex_sensor_glove(
+    device_name: &str,
+    verbose: bool,
+) -> anyhow::Result<PlatformPeripheral> {
     let adapter = find_central(verbose).await?;
     let mut events = adapter.events().await?;
 
     adapter.start_scan(ScanFilter::default()).await?;
 
     if verbose {
-        print_info(&format!("Statrting scan with adapter: {}", adapter.adapter_info().await?));
+        print_info(&format!(
+            "Statrting scan with adapter: {}",
+            adapter.adapter_info().await?
+        ));
     }
 
     while let Some(event) = events.next().await {
@@ -120,12 +128,10 @@ async fn find_notify_characteristic(
     peripheral: &PlatformPeripheral,
 ) -> anyhow::Result<Characteristic> {
     peripheral.discover_services().await?;
+
     peripheral
-        .services()
-        .iter()
-        .filter(|s| s.uuid == FLEX_SENSOR_GLOVE_SERVICE_UUID)
-        .flat_map(|s| s.characteristics.iter())
-        .next()
+        .characteristics()
+        .into_iter()
+        .find(|c| c.uuid == FLEX_SENSOR_GLOVE_CHAR_UUID)
         .ok_or(anyhow!("Notify characteristic not found"))
-        .cloned()
 }
