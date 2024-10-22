@@ -1,7 +1,7 @@
 use core::str;
 
 use anyhow::{anyhow, bail};
-use btleplug::api::{Central, CentralEvent, Characteristic, Manager as _, Peripheral, ScanFilter};
+use btleplug::api::{Central, CentralEvent, CharPropFlags, Characteristic, Manager as _, Peripheral, ScanFilter};
 use btleplug::platform::{Adapter, Manager, Peripheral as PlatformPeripheral};
 use clap::Parser;
 use console::style;
@@ -102,7 +102,7 @@ async fn scan_for_flex_sensor_glove(
         }
 
         if properties.local_name == Some(device_name.into()) {
-            adapter.stop_scan().await?;
+            // adapter.stop_scan().await?;
             return Ok(peripheral);
         }
     }
@@ -132,6 +132,6 @@ async fn find_notify_characteristic(
     peripheral
         .characteristics()
         .into_iter()
-        .find(|c| c.uuid == FLEX_SENSOR_GLOVE_CHAR_UUID)
+        .find(|c| c.uuid == FLEX_SENSOR_GLOVE_CHAR_UUID && c.properties.contains(CharPropFlags::NOTIFY))
         .ok_or(anyhow!("Notify characteristic not found"))
 }
