@@ -1,19 +1,72 @@
-use std::fmt::{self, Display, Formatter};
+use std::{
+    fmt::{self, Display, Formatter},
+    iter::Sum,
+    ops::{Add, Div, Sub},
+};
 
 use chrono::{DateTime, Local, TimeDelta};
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+pub struct FingersFlexValues(pub [u32; 5]);
+
+impl Div<u32> for FingersFlexValues {
+    type Output = Self;
+
+    fn div(self, rhs: u32) -> Self {
+        let mut result = FingersFlexValues([0; 5]);
+        for i in 0..5 {
+            result.0[i] = self.0[i] / rhs;
+        }
+        result
+    }
+}
+
+impl Sub for FingersFlexValues {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        let mut result = FingersFlexValues([0; 5]);
+        for i in 0..5 {
+            result.0[i] = self.0[i].saturating_sub(other.0[i]);
+        }
+        result
+    }
+}
+
+impl Add for FingersFlexValues {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let mut result = FingersFlexValues([0; 5]);
+        for i in 0..5 {
+            result.0[i] = self.0[i] + other.0[i];
+        }
+        result
+    }
+}
+
+impl Sum for FingersFlexValues {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let mut sum = FingersFlexValues([0; 5]);
+        for item in iter {
+            sum = sum + item;
+        }
+        sum
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlexSensorGloveNotification {
-    dt: DateTime<Local>,
-    flex_values: [u16; 5],
+    pub dt: DateTime<Local>,
+    pub flex_values: FingersFlexValues,
 }
 
 impl FlexSensorGloveNotification {
     pub fn from_buffer(buffer: &[u8], dt_start: DateTime<Local>) -> Self {
         let mut flex_values = [0; 5];
         for i in 0..5 {
-            flex_values[i] = u16::from_le_bytes([buffer[i * 2], buffer[i * 2 + 1]]);
+            flex_values[i] = u16::from_le_bytes([buffer[i * 2], buffer[i * 2 + 1]]) as u32;
         }
 
         let millis = u32::from_le_bytes([buffer[10], buffer[11], buffer[12], buffer[13]]);
@@ -21,7 +74,7 @@ impl FlexSensorGloveNotification {
 
         FlexSensorGloveNotification {
             dt: dt_start + millis,
-            flex_values,
+            flex_values: FingersFlexValues(flex_values),
         }
     }
 }

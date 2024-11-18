@@ -1,24 +1,17 @@
 use core::str;
 
-use anyhow::{anyhow, bail};
-use btleplug::api::{Central, CentralEvent, CharPropFlags, Characteristic, Manager as _, Peripheral, ScanFilter};
-use btleplug::platform::{Adapter, Manager, Peripheral as PlatformPeripheral};
 use clap::Parser;
 use console::style;
+use devices::{FingersVibrationIntensity, FlexSensorGlove, VibrationGlove};
 use dotenv::dotenv;
 use futures::stream::StreamExt;
 use opt::Opt;
-use parser::FlexSensorGloveNotification;
-use uuid::Uuid;
 
+mod aggregator;
+mod devices;
 mod opt;
 mod output;
 mod parser;
-
-const _FLEX_SENSOR_GLOVE_SERVICE_UUID: Uuid =
-    Uuid::from_u128(0xf5874094_9074_4bb6_9257_f3593d73d836);
-
-const FLEX_SENSOR_GLOVE_CHAR_UUID: Uuid = Uuid::from_u128(0xa81ed63c_cf54_4742_a27a_f398228acd90);
 
 #[tokio::main]
 async fn main() {
@@ -37,101 +30,39 @@ fn print_info(str: &str) {
 }
 
 async fn run(opt: Opt) -> anyhow::Result<()> {
-    let peripheral = scan_for_flex_sensor_glove(&opt.device_name, opt.verbose).await?;
+    let flex_sensor_glove = FlexSensorGlove::new(&opt).await?;
+    let mut vibration_glove = VibrationGlove::new(&opt).await?;
 
-    if opt.verbose {
-        print_info("Peripheral found, connecting...");
-    }
-
-    if let Err(err) = peripheral.connect().await {
-        bail!("Error connecting to peripheral, skipping: {}", err);
-    }
-
-    if opt.verbose {
-        print_info("Connected to peripheral");
-    }
-
-    let dt_start = chrono::Local::now();
-
-    peripheral.discover_services().await?;
-    let notify_char = find_notify_characteristic(&peripheral).await?;
-
-    peripheral.subscribe(&notify_char).await?;
-
-    let mut notification_stream = peripheral.notifications().await?;
+    let notification_stream = flex_sensor_glove.get_notifications_stream().await?;
     let mut output_writer = opt.output_format.create_writer();
 
     if opt.verbose {
         print_info("Reading notifications...");
     }
 
+    let mut notification_stream =
+        aggregator::mean_flex_values_by_size(notification_stream, opt.aggregation_size).await;
+
     while let Some(notification) = notification_stream.next().await {
-        let notification = FlexSensorGloveNotification::from_buffer(&notification.value, dt_start);
+        let mut vibration_state: FingersVibrationIntensity = [0; 5];
+
+        notification
+            .flex_values
+            .0
+            .iter()
+            .enumerate()
+            .for_each(|(i, &value)| {
+                vibration_state[i] = if value > opt.sensibility {
+                    opt.vibration_intensity
+                } else {
+                    0
+                };
+            });
+
+        vibration_glove.update_state(vibration_state).await?;
+
         output_writer.write_row(&notification)?;
     }
 
     Ok(())
-}
-
-async fn scan_for_flex_sensor_glove(
-    device_name: &str,
-    verbose: bool,
-) -> anyhow::Result<PlatformPeripheral> {
-    let adapter = find_central(verbose).await?;
-    let mut events = adapter.events().await?;
-
-    adapter.start_scan(ScanFilter::default()).await?;
-
-    if verbose {
-        print_info(&format!(
-            "Statrting scan with adapter: {}",
-            adapter.adapter_info().await?
-        ));
-    }
-
-    while let Some(event) = events.next().await {
-        let CentralEvent::DeviceDiscovered(id) = event else {
-            continue;
-        };
-
-        let peripheral = adapter.peripheral(&id).await?;
-        let properties = peripheral.properties().await?.unwrap();
-
-        if verbose {
-            print_info(&format!("Found device: {:?}", properties.local_name));
-        }
-
-        if properties.local_name == Some(device_name.into()) {
-            // adapter.stop_scan().await?;
-            return Ok(peripheral);
-        }
-    }
-
-    bail!("device {device_name} not found")
-}
-
-async fn find_central(verbose: bool) -> anyhow::Result<Adapter> {
-    let manager = Manager::new().await?;
-    let adapter_list = manager.adapters().await?;
-    if adapter_list.is_empty() {
-        bail!("No Bluetooth adapters found");
-    }
-
-    if verbose {
-        print_info(&format!("Found adapters {}", adapter_list.len()));
-    }
-
-    Ok(adapter_list[0].clone())
-}
-
-async fn find_notify_characteristic(
-    peripheral: &PlatformPeripheral,
-) -> anyhow::Result<Characteristic> {
-    peripheral.discover_services().await?;
-
-    peripheral
-        .characteristics()
-        .into_iter()
-        .find(|c| c.uuid == FLEX_SENSOR_GLOVE_CHAR_UUID && c.properties.contains(CharPropFlags::NOTIFY))
-        .ok_or(anyhow!("Notify characteristic not found"))
 }
