@@ -81,7 +81,7 @@ impl VibrationGlove {
         if data == self.last_state {
             return Ok(());
         }
-
+        
         self.peripheral
             .write(&self.write_char, &data, WriteType::WithoutResponse)
             .await?;

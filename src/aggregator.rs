@@ -33,7 +33,7 @@ impl MeanAggregator {
     }
 }
 
-pub async fn mean_flex_values_by_size<S>(
+pub async fn _mean_flex_values_by_size<S>(
     mut stream: S,
     aggregation_size: usize,
 ) -> impl futures::Stream<Item = FlexSensorGloveNotification>
