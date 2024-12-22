@@ -2,18 +2,18 @@ use core::str;
 
 use clap::Parser;
 use console::style;
-use devices::{FingersVibrationIntensity, FlexSensorGlove, VibrationGlove};
+use devices::{FlexSensorGlove, VibrationGlove};
 use dotenv::dotenv;
-use futures::stream::StreamExt;
 use opt::Opt;
-use aggregator::MeanAggregator;
+use process::Process;
 
 mod aggregator;
 mod devices;
 mod opt;
 mod output;
 mod parser;
-
+mod lsl_setup;
+mod process;
 
 #[tokio::main]
 async fn main() {
@@ -35,38 +35,23 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
     let flex_sensor_glove = FlexSensorGlove::new(&opt).await?;
     let mut vibration_glove = VibrationGlove::new(&opt).await?;
 
-    let mut notification_stream = flex_sensor_glove.get_notifications_stream().await?;
-    let mut output_writer = opt.output_format.create_writer();
+    let output_writer = opt.output_format.create_writer();
 
     if opt.verbose {
         print_info("Reading notifications...");
     }
 
-    let init_data = notification_stream.by_ref().take(opt.aggregation_size).collect().await;
-    let mut aggregator = MeanAggregator::new(init_data);
+    let mut process = Process::new(&flex_sensor_glove, opt.aggregation_size).await?;
 
-    while let Some(notification) = notification_stream.next().await {
-        let mut vibration_state: FingersVibrationIntensity = [0; 5];
+    process.set_vibration_glove(&mut vibration_glove);
+    process.set_output_writer(output_writer);
 
-        let aggregated_notification = aggregator.push_and_aggregate(notification.clone());
-
-        aggregated_notification
-            .flex_values
-            .0
-            .iter()
-            .enumerate()
-            .for_each(|(i, &value)| {
-                vibration_state[i] = if value > opt.fingers_sensibility.0[i] {
-                    opt.vibration_intensity
-                } else {
-                    0
-                };
-            });
-
-        vibration_glove.update_state(vibration_state).await?;
-
-        output_writer.write_row(&notification)?;
+    if opt.lsl {
+        let lsl_stream_outlet = lsl_setup::setup_stream_outlet()?;
+        process.set_lsl_stream_outlet(lsl_stream_outlet);
     }
+
+    process.run().await?;
 
     Ok(())
 }

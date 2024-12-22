@@ -22,6 +22,9 @@ pub struct Opt {
 
     #[arg(long, short, default_value = "false")]
     pub verbose: bool,
+
+    #[arg(long, default_value = "false")]
+    pub lsl: bool,
 }
 
 #[derive(Copy, Clone, serde::Serialize, serde::Deserialize)]

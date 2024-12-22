@@ -6,8 +6,8 @@ use btleplug::platform::{Adapter, Manager, Peripheral as PlatformPeripheral};
 use futures::StreamExt;
 use uuid::Uuid;
 
-use crate::opt::Opt;
-use crate::parser::FlexSensorGloveNotification;
+use crate::opt::{FingersSensibility, Opt};
+use crate::parser::{FingersFlexValues, FlexSensorGloveNotification};
 use crate::print_info;
 
 const _FLEX_SENSOR_GLOVE_SERVICE_UUID: Uuid =
@@ -56,6 +56,9 @@ pub struct VibrationGlove {
     peripheral: PlatformPeripheral,
     write_char: Characteristic,
     last_state: FingersVibrationIntensity,
+
+    fingers_sensibility: FingersSensibility,
+    vibration_intensity: u8,
 }
 
 pub type FingersVibrationIntensity = [u8; 5];
@@ -74,7 +77,28 @@ impl VibrationGlove {
             peripheral,
             write_char,
             last_state: [0; 5],
+
+            fingers_sensibility: opt.fingers_sensibility,
+            vibration_intensity: opt.vibration_intensity,
         })
+    }
+
+    pub async fn process_flex_values(&mut self, flex_values: &FingersFlexValues) -> anyhow::Result<()> {
+        let mut vibration_state: FingersVibrationIntensity = [0; 5];
+
+        flex_values
+            .0
+            .iter()
+            .enumerate()
+            .for_each(|(i, &value)| {
+                vibration_state[i] = if value > self.fingers_sensibility.0[i] {
+                    self.vibration_intensity
+                } else {
+                    0
+                };
+            });
+
+        self.update_state(vibration_state).await
     }
 
     pub async fn update_state(&mut self, data: FingersVibrationIntensity) -> anyhow::Result<()> {
