@@ -29,6 +29,7 @@ impl ReapeatingPattern {
         let elapsed_time = time
             .signed_duration_since(self.last_time_done)
             .num_milliseconds() as u32;
+
         if elapsed_time > self.max_ms_delay {
             self.nb_done = 0;
         }
@@ -66,6 +67,7 @@ impl Pattern {
         let elapsed_time = time
             .signed_duration_since(self.last_finger_time)
             .num_milliseconds() as u32;
+
         if elapsed_time > self.max_ms_delay {
             self.current_index = 0;
         }

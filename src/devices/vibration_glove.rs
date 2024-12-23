@@ -16,9 +16,41 @@ const DEFAULT_RANDOM_MODE_VIBRATION_DURATION: i64 = 100;
 
 const DEFAULT_RANDOM_MODE_DELAY_RANGE: Range<i64> = 2000..4000;
 
+const DEFAULT_DESINHIBITION_MODE_VIBRATION_INTENSITY: u8 = 60;
+const DEFAULT_DESINHIBITION_MODE_VIBRATION_DURATION: i64 = 5000;
+const DEFAULT_DESINHIBITION_MODE_VIBRATION_DELAY: i64 = 5000;
+
 pub enum VibrationMode {
-    SynapticResponse,
+    Desinhibition(DesinhibitionVibrationModeConfig),
+    _SynapticResponse,
     Random(RandomVibrationModeConfig),
+}
+
+pub struct DesinhibitionVibrationModeConfig {
+    pub vibration_intensity: u8,
+    pub vibration_duration: i64,
+    pub vibration_delay: i64,
+
+    last_vibration_start_time: DateTime<Local>,
+}
+
+impl DesinhibitionVibrationModeConfig {
+    pub fn process_moved_fingers(&mut self, time: DateTime<Local>) -> FingersVibrationIntensity {
+        if self.last_vibration_start_time
+            + Duration::milliseconds(self.vibration_delay + self.vibration_duration)
+            >= time
+        {
+            self.last_vibration_start_time = time;
+            return [self.vibration_intensity; 5];
+        }
+
+        if self.last_vibration_start_time + Duration::milliseconds(self.vibration_duration) <= time
+        {
+            return [self.vibration_intensity; 5];
+        }
+
+        [0; 5]
+    }
 }
 
 pub struct RandomVibrationModeConfig {
@@ -109,7 +141,12 @@ impl VibrationGlove {
             write_char,
             last_state: [0; 5],
             vibration_intensity: opt.vibration_intensity,
-            vibration_mode: VibrationMode::SynapticResponse,
+            vibration_mode: VibrationMode::Desinhibition(DesinhibitionVibrationModeConfig {
+                vibration_intensity: DEFAULT_DESINHIBITION_MODE_VIBRATION_INTENSITY,
+                vibration_duration: DEFAULT_DESINHIBITION_MODE_VIBRATION_DURATION,
+                vibration_delay: DEFAULT_DESINHIBITION_MODE_VIBRATION_DELAY,
+                last_vibration_start_time: chrono::Local::now(),
+            }),
         })
     }
 
@@ -123,7 +160,7 @@ impl VibrationGlove {
         time: DateTime<Local>,
     ) -> anyhow::Result<()> {
         let vibration_state = match &mut self.vibration_mode {
-            VibrationMode::SynapticResponse => moved_fingers.map(|is_moving| {
+            VibrationMode::_SynapticResponse => moved_fingers.map(|is_moving| {
                 if is_moving {
                     self.vibration_intensity
                 } else {
@@ -131,6 +168,7 @@ impl VibrationGlove {
                 }
             }),
             VibrationMode::Random(config) => config.process_moved_fingers(time),
+            VibrationMode::Desinhibition(config) => config.process_moved_fingers(time),
         };
 
         self.update_state(vibration_state).await

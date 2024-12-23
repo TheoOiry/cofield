@@ -38,6 +38,7 @@ impl<'a, 'b> Process<'a, 'b> {
             .take(aggregation_size)
             .collect()
             .await;
+
         let aggregator = MeanAggregator::new(init_data);
 
         let lucid_dream_detection_pattern =
