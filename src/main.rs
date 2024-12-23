@@ -9,10 +9,11 @@ use process::Process;
 
 mod aggregator;
 mod devices;
+mod lsl_setup;
 mod opt;
 mod output;
 mod parser;
-mod lsl_setup;
+mod patterns;
 mod process;
 
 #[tokio::main]
@@ -41,7 +42,12 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
         print_info("Reading notifications...");
     }
 
-    let mut process = Process::new(&flex_sensor_glove, opt.aggregation_size).await?;
+    let mut process = Process::new(
+        &flex_sensor_glove,
+        opt.aggregation_size,
+        opt.fingers_sensibility,
+    )
+    .await?;
 
     process.set_vibration_glove(&mut vibration_glove);
     process.set_output_writer(output_writer);

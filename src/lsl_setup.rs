@@ -57,8 +57,8 @@ impl ExPushable<FlexSensorGloveNotification> for StreamOutlet {
 fn synchronize_lsl_time(datetime: DateTime<Local>) -> f64 {
     let lsl_time = lsl::local_clock();
 
-    let unix_time = datetime.timestamp() as f64 
-        + datetime.timestamp_subsec_micros() as f64 / 1_000_000.0;
+    let unix_time =
+        datetime.timestamp() as f64 + datetime.timestamp_subsec_micros() as f64 / 1_000_000.0;
 
     lsl_time - unix_time
 }

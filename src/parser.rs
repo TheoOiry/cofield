@@ -7,8 +7,22 @@ use std::{
 use chrono::{DateTime, Local, TimeDelta};
 use serde::{Deserialize, Serialize};
 
+use crate::opt::FingersSensibility;
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct FingersFlexValues(pub [u32; 5]);
+
+impl FingersFlexValues {
+    pub fn detect_moved_fingers(&self, sensibility: &FingersSensibility) -> [bool; 5] {
+        let mut moved_fingers = [false; 5];
+
+        self.0.iter().enumerate().for_each(|(i, &value)| {
+            moved_fingers[i] = value > sensibility.0[i];
+        });
+
+        moved_fingers
+    }
+}
 
 impl Div<u32> for FingersFlexValues {
     type Output = Self;
