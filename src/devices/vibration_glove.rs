@@ -187,4 +187,8 @@ impl VibrationGlove {
 
         Ok(())
     }
+
+    pub fn get_last_state(&self) -> FingersVibrationIntensity {
+        self.last_state
+    }
 }

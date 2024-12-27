@@ -5,6 +5,7 @@ use crate::{
     aggregator::MeanAggregator,
     devices::{FlexSensorGlove, RandomVibrationModeConfig, VibrationGlove, VibrationMode},
     opt::FingersSensibility,
+    output::OutputRow,
     patterns::{
         Pattern, ReapeatingPattern, DEFAULT_PATTERN_MAX_DELAY, DEFAULT_REPEATING_PATTERN_DELAY,
         FINGERS_ORDER,
@@ -86,7 +87,7 @@ impl<'a, 'b> Process<'a, 'b> {
                 self.is_lucid_dreaming = self.lucid_dream_detection_pattern.nb_done >= 3;
             }
 
-            if let Some(vibration_glove) = &mut self.vibration_glove {
+            let vibration_state = if let Some(vibration_glove) = &mut self.vibration_glove {
                 vibration_glove
                     .process_moved_fingers(&moved_fingers, notification.dt)
                     .await?;
@@ -98,14 +99,23 @@ impl<'a, 'b> Process<'a, 'b> {
                         RandomVibrationModeConfig::new(),
                     ));
                 }
-            }
+
+                vibration_glove.get_last_state()
+            } else {
+                Default::default()
+            };
+
+            let output_row = OutputRow {
+                notification: &aggregated_notification,
+                vibration_state: &vibration_state,
+            };
 
             if let Some(output_writer) = &mut self.output_writer {
-                output_writer.write_row(&aggregated_notification)?;
+                output_writer.write_row(&output_row)?;
             }
 
             if let Some(lsl_stream_outlet) = &self.lsl_stream_outlet {
-                lsl_stream_outlet.push_sample(&aggregated_notification)?;
+                lsl_stream_outlet.push_sample(&output_row)?;
             }
         }
 

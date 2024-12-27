@@ -1,9 +1,9 @@
 use chrono::{DateTime, Local};
 use lsl::{ExPushable, StreamInfo, StreamOutlet};
 
-use crate::parser::FlexSensorGloveNotification;
+use crate::output::OutputRow;
 
-const NUMBER_OF_CHANNELS: u32 = 18;
+const NUMBER_OF_CHANNELS: u32 = 10;
 const MAX_BUFFERED_SECONDS: i32 = 60 * 6;
 const NOMINAL_SRATE: f64 = 50.0;
 const CHUNK_SIZE: i32 = 5;
@@ -37,18 +37,27 @@ pub fn setup_stream_infos() -> anyhow::Result<StreamInfo> {
             .append_child_value("object", "FigersMouvement");
     }
 
+    for i in 1..=5 {
+        channels
+            .append_child("channel")
+            .append_child_value("label", &format!("FingerVibration{}", i))
+            .append_child_value("object", "FigersVibration");
+    }
+
     Ok(info)
 }
 
-impl ExPushable<FlexSensorGloveNotification> for StreamOutlet {
+impl<'a> ExPushable<OutputRow<'a>> for StreamOutlet {
     fn push_sample_ex(
         &self,
-        data: &FlexSensorGloveNotification,
+        data: &OutputRow,
         _timestamp: f64,
         pushthrough: bool,
     ) -> Result<(), lsl::Error> {
-        let payload = data.flex_values.0.map(|v| v as i16).to_vec();
-        let timestamp = synchronize_lsl_time(data.dt);
+        let mut payload = data.notification.flex_values.0.map(|v| v as i16).to_vec();
+        payload.extend(data.vibration_state.iter().map(|v| *v as i16));
+
+        let timestamp = synchronize_lsl_time(data.notification.dt);
 
         self.push_sample_ex(&payload, timestamp, pushthrough)
     }
