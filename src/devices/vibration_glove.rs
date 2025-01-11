@@ -127,8 +127,8 @@ pub struct VibrationGlove {
 pub type FingersVibrationIntensity = [u8; 5];
 
 impl VibrationGlove {
-    pub async fn new(opt: &Opt) -> anyhow::Result<Self> {
-        let peripheral = super::find_ble_device(&opt.input_glove_name, opt.verbose).await?;
+    pub async fn new(input_glove_name: &str, opt: &Opt) -> anyhow::Result<Self> {
+        let peripheral = super::find_ble_device(input_glove_name, opt.verbose).await?;
 
         if let Err(err) = peripheral.connect().await {
             bail!("Error connecting to the vibration glove, skipping: {}", err);

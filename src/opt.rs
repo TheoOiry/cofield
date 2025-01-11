@@ -8,8 +8,8 @@ pub struct Opt {
     #[arg(long, default_value = "FlexSensorGlove")]
     pub output_glove_name: String,
 
-    #[arg(long, default_value = "VibrationGlove")]
-    pub input_glove_name: String,
+    #[arg(long)]
+    pub input_glove_name: Option<String>,
 
     #[arg(long, default_value = "10")]
     pub aggregation_size: usize,
