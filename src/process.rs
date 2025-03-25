@@ -3,7 +3,7 @@ use lsl::Pushable;
 
 use crate::{
     aggregator::MeanAggregator,
-    devices::{FlexSensorGlove, RandomVibrationModeConfig, VibrationGlove, VibrationMode},
+    devices::{RandomVibrationModeConfig, VibrationGlove, VibrationMode},
     opt::FingersSensibility,
     output::OutputRow,
     patterns::{
@@ -28,12 +28,13 @@ pub struct Process<'a, 'b> {
 
 impl<'a, 'b> Process<'a, 'b> {
     pub async fn new(
-        flex_sensor_glove: &'a FlexSensorGlove,
+        mut notification_stream: futures::stream::BoxStream<
+            'a,
+            crate::parser::FlexSensorGloveNotification,
+        >,
         aggregation_size: usize,
         fingers_sensibility: FingersSensibility,
     ) -> anyhow::Result<Self> {
-        let mut notification_stream = flex_sensor_glove.get_notifications_stream().await?;
-
         let aggregator = if aggregation_size > 0 {
             let init_data = notification_stream
                 .by_ref()

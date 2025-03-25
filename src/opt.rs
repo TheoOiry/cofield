@@ -2,6 +2,11 @@ use clap::{Parser, ValueEnum};
 
 #[derive(Parser)]
 pub struct Opt {
+    /// Read from stdin to get the glove notifications in csv format.
+    /// In this mode, the gloves are not used and lsl is disabled
+    #[arg(long, default_value = "false")]
+    pub input_from_stdin: bool,
+
     #[arg(short, long, value_enum, default_value_t=OutputFormat::default())]
     pub output_format: OutputFormat,
 

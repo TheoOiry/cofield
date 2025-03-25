@@ -1,9 +1,11 @@
 use core::str;
+use std::io;
 
 use clap::Parser;
 use console::style;
 use devices::{FlexSensorGlove, VibrationGlove};
 use dotenv::dotenv;
+use futures::StreamExt;
 use opt::Opt;
 use process::Process;
 
@@ -33,7 +35,12 @@ fn print_info(str: &str) {
 }
 
 async fn run(opt: Opt) -> anyhow::Result<()> {
+    if opt.input_from_stdin {
+        return run_with_stdin(opt).await;
+    }
+
     let flex_sensor_glove = FlexSensorGlove::new(&opt).await?;
+    let notification_stream = Box::pin(flex_sensor_glove.get_notifications_stream().await?);
 
     let mut vibration_glove = match &opt.input_glove_name {
         Some(input_glove_name) => Some(VibrationGlove::new(input_glove_name, &opt).await?),
@@ -47,7 +54,7 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
     }
 
     let mut process = Process::new(
-        &flex_sensor_glove,
+        notification_stream,
         opt.aggregation_size,
         opt.fingers_sensibility,
     )
@@ -67,4 +74,33 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
     process.run().await?;
 
     Ok(())
+}
+
+async fn run_with_stdin(opt: Opt) -> anyhow::Result<()> {
+    let output_writer = opt.output_format.create_writer();
+    let notification_stream = get_stdin_csv_notification_stream().await;
+
+    let mut process = Process::new(
+        notification_stream,
+        opt.aggregation_size,
+        opt.fingers_sensibility,
+    )
+    .await?;
+
+    process.set_output_writer(output_writer);
+    process.run().await?;
+
+    Ok(())
+}
+
+async fn get_stdin_csv_notification_stream(
+) -> futures::stream::BoxStream<'static, crate::parser::FlexSensorGloveNotification> {
+    let notifications: Vec<crate::parser::FlexSensorGloveNotification> = csv::ReaderBuilder::new()
+        .has_headers(false)
+        .from_reader(io::stdin())
+        .into_deserialize()
+        .map(|row| row.unwrap())
+        .collect();
+
+    futures::stream::iter(notifications).boxed()
 }
