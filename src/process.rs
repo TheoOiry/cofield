@@ -40,7 +40,7 @@ impl<'a, 'b> Process<'a, 'b> {
                 .take(aggregation_size)
                 .collect()
                 .await;
-    
+
             Some(MeanAggregator::new(init_data))
         } else {
             None
@@ -80,7 +80,6 @@ impl<'a, 'b> Process<'a, 'b> {
 
     pub async fn run(&mut self) -> anyhow::Result<()> {
         while let Some(notification) = self.notification_stream.next().await {
-
             let aggregated_notification = if let Some(aggregator) = &mut self.aggregator {
                 aggregator.push_and_aggregate(notification)
             } else {

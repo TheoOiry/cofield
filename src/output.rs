@@ -13,7 +13,7 @@ pub struct OutputRow<'a> {
     pub vibration_state: &'a [u8; 5],
 }
 
-impl<'a> Display for OutputRow<'a> {
+impl Display for OutputRow<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,

@@ -47,7 +47,7 @@ pub fn setup_stream_infos() -> anyhow::Result<StreamInfo> {
     Ok(info)
 }
 
-impl<'a> ExPushable<OutputRow<'a>> for StreamOutlet {
+impl ExPushable<OutputRow<'_>> for StreamOutlet {
     fn push_sample_ex(
         &self,
         data: &OutputRow,
