@@ -71,6 +71,7 @@ impl Sum for FingersFlexValues {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FlexSensorGloveNotification {
     pub dt: DateTime<Local>,
     pub flex_values: FingersFlexValues,

@@ -1,20 +1,30 @@
 use crate::parser::{FingersFlexValues, FlexSensorGloveNotification};
-use futures::stream::StreamExt;
+
 pub struct MeanAggregator {
     rows: Vec<FlexSensorGloveNotification>,
+    target_aggregation_size: usize,
 }
 
 impl MeanAggregator {
-    pub fn new(rows: Vec<FlexSensorGloveNotification>) -> Self {
-        Self { rows }
+    pub fn new(target_aggregation_size: usize) -> Self {
+        assert!(target_aggregation_size > 0);
+
+        Self { rows: vec![], target_aggregation_size }
     }
 
     pub fn push_and_aggregate(
         &mut self,
         new_row: FlexSensorGloveNotification,
     ) -> FlexSensorGloveNotification {
-        self.rows.remove(0);
-        self.rows.push(new_row);
+        let len = self.rows.len() as usize;
+
+        if len >= self.target_aggregation_size {
+            self.rows.remove(0);
+        }
+
+        if len <= self.target_aggregation_size {
+            self.rows.push(new_row);            
+        }
 
         self.aggregate_rows()
     }
@@ -31,19 +41,4 @@ impl MeanAggregator {
             flex_values,
         }
     }
-}
-
-pub async fn _mean_flex_values_by_size<S>(
-    mut stream: S,
-    aggregation_size: usize,
-) -> impl futures::Stream<Item = FlexSensorGloveNotification>
-where
-    S: futures::Stream<Item = FlexSensorGloveNotification>,
-    for<'a> &'a mut S: futures::Stream<Item = FlexSensorGloveNotification>,
-{
-    let init_data = stream.by_ref().take(aggregation_size).collect().await;
-
-    let mut aggregator = MeanAggregator::new(init_data);
-
-    stream.map(move |row| aggregator.push_and_aggregate(row))
 }

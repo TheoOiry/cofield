@@ -1,4 +1,6 @@
 use futures::StreamExt;
+
+#[cfg(feature = "lsl")]
 use lsl::Pushable;
 
 use crate::{
@@ -19,8 +21,12 @@ pub struct Process<'a, 'b> {
     notification_stream: futures::stream::BoxStream<'a, crate::parser::FlexSensorGloveNotification>,
     aggregator: Option<MeanAggregator>,
 
-    output_writer: Option<Box<dyn crate::output::OutputWriter>>,
+    output_writer: Option<Box<dyn crate::output::OutputWriter + Send>>,
+
+    #[cfg(feature = "lsl")]
     lsl_stream_outlet: Option<lsl::StreamOutlet>,
+
+    raw_data_writer: Option<csv::Writer<std::fs::File>>,
 
     lucid_dream_detection_pattern: ReapeatingPattern,
     is_lucid_dreaming: bool,
@@ -28,7 +34,7 @@ pub struct Process<'a, 'b> {
 
 impl<'a, 'b> Process<'a, 'b> {
     pub async fn new(
-        mut notification_stream: futures::stream::BoxStream<
+        notification_stream: futures::stream::BoxStream<
             'a,
             crate::parser::FlexSensorGloveNotification,
         >,
@@ -36,13 +42,7 @@ impl<'a, 'b> Process<'a, 'b> {
         fingers_sensibility: FingersSensibility,
     ) -> anyhow::Result<Self> {
         let aggregator = if aggregation_size > 0 {
-            let init_data = notification_stream
-                .by_ref()
-                .take(aggregation_size)
-                .collect()
-                .await;
-
-            Some(MeanAggregator::new(init_data))
+            Some(MeanAggregator::new(aggregation_size))
         } else {
             None
         };
@@ -63,6 +63,9 @@ impl<'a, 'b> Process<'a, 'b> {
             is_lucid_dreaming: false,
             vibration_glove: None,
             output_writer: None,
+            raw_data_writer: None,
+
+            #[cfg(feature = "lsl")]
             lsl_stream_outlet: None,
         })
     }
@@ -71,16 +74,41 @@ impl<'a, 'b> Process<'a, 'b> {
         self.vibration_glove = Some(vibration_glove);
     }
 
-    pub fn set_output_writer(&mut self, output_writer: Box<dyn crate::output::OutputWriter>) {
+    pub fn set_output_writer(
+        &mut self,
+        output_writer: Box<dyn crate::output::OutputWriter + Send>,
+    ) {
         self.output_writer = Some(output_writer);
     }
 
+    pub fn set_output_raw_data(
+        &mut self,
+        output_raw_data: Option<std::path::PathBuf>,
+    ) -> anyhow::Result<()> {
+        self.raw_data_writer = match output_raw_data {
+            Some(output_raw_data) => Some(
+                csv::WriterBuilder::new()
+                    .has_headers(false)
+                    .from_path(output_raw_data)?,
+            ),
+            None => None,
+        };
+
+        Ok(())
+    }
+
+    #[cfg(feature = "lsl")]
     pub fn set_lsl_stream_outlet(&mut self, lsl_stream_outlet: lsl::StreamOutlet) {
         self.lsl_stream_outlet = Some(lsl_stream_outlet);
     }
 
     pub async fn run(&mut self) -> anyhow::Result<()> {
         while let Some(notification) = self.notification_stream.next().await {
+            if let Some(raw_data_writer) = &mut self.raw_data_writer {
+                raw_data_writer.serialize(&notification)?;
+                raw_data_writer.flush()?;
+            }
+
             let aggregated_notification = if let Some(aggregator) = &mut self.aggregator {
                 aggregator.push_and_aggregate(notification)
             } else {
@@ -124,6 +152,7 @@ impl<'a, 'b> Process<'a, 'b> {
                 output_writer.write_row(&output_row)?;
             }
 
+            #[cfg(feature = "lsl")]
             if let Some(lsl_stream_outlet) = &self.lsl_stream_outlet {
                 lsl_stream_outlet.push_sample(&output_row)?;
             }

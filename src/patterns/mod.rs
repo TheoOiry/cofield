@@ -1,5 +1,8 @@
 use chrono::{DateTime, Local};
 
+mod text;
+pub use text::TextPattern;
+
 pub const FINGERS_ORDER: [u8; 5] = [0, 1, 2, 3, 4];
 
 pub const DEFAULT_PATTERN_MAX_DELAY: u32 = 500;

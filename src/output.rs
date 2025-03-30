@@ -8,6 +8,7 @@ use serde::Serialize;
 use crate::{opt::OutputFormat, parser::FlexSensorGloveNotification};
 
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct OutputRow<'a> {
     pub notification: &'a FlexSensorGloveNotification,
     pub vibration_state: &'a [u8; 5],
@@ -44,7 +45,7 @@ impl OutputWriter for csv::Writer<Stdout> {
 }
 
 impl OutputFormat {
-    pub fn create_writer(&self) -> Box<dyn OutputWriter> {
+    pub fn create_writer(&self) -> Box<dyn OutputWriter + Send> {
         match self {
             OutputFormat::Pretty => Box::new(PrettyWriter),
             OutputFormat::Csv => Box::new(

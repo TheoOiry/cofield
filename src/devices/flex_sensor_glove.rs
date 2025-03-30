@@ -48,3 +48,9 @@ impl FlexSensorGlove {
         }))
     }
 }
+
+impl Drop for FlexSensorGlove {
+    fn drop(&mut self) {
+        let _ = self.peripheral.disconnect();
+    }
+}

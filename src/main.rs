@@ -1,22 +1,13 @@
-use core::str;
 use std::io;
 
 use clap::Parser;
+use cofield_receiver::{
+    flex_sensor_glove::FlexSensorGlove, print_info, FlexSensorGloveNotification, Opt, Process,
+    VibrationGlove,
+};
 use console::style;
-use devices::{FlexSensorGlove, VibrationGlove};
 use dotenv::dotenv;
 use futures::StreamExt;
-use opt::Opt;
-use process::Process;
-
-mod aggregator;
-mod devices;
-mod lsl_setup;
-mod opt;
-mod output;
-mod parser;
-mod patterns;
-mod process;
 
 #[tokio::main]
 async fn main() {
@@ -28,10 +19,6 @@ async fn main() {
         eprintln!("{} {}", style("ERROR:").bold().red(), error);
         std::process::exit(1);
     }
-}
-
-fn print_info(str: &str) {
-    eprintln!("{} {str}", style("INFO:").bold().cyan());
 }
 
 async fn run(opt: Opt) -> anyhow::Result<()> {
@@ -64,10 +51,12 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
         process.set_vibration_glove(vibration_glove);
     }
 
+    process.set_output_raw_data(opt.output_raw_data)?;
     process.set_output_writer(output_writer);
 
+    #[cfg(feature = "lsl")]
     if opt.lsl {
-        let lsl_stream_outlet = lsl_setup::setup_stream_outlet()?;
+        let lsl_stream_outlet = cofield_receiver::lsl_setup::setup_stream_outlet()?;
         process.set_lsl_stream_outlet(lsl_stream_outlet);
     }
 
@@ -88,14 +77,16 @@ async fn run_with_stdin(opt: Opt) -> anyhow::Result<()> {
     .await?;
 
     process.set_output_writer(output_writer);
+    process.set_output_raw_data(opt.output_raw_data)?;
+
     process.run().await?;
 
     Ok(())
 }
 
 async fn get_stdin_csv_notification_stream(
-) -> futures::stream::BoxStream<'static, crate::parser::FlexSensorGloveNotification> {
-    let notifications: Vec<crate::parser::FlexSensorGloveNotification> = csv::ReaderBuilder::new()
+) -> futures::stream::BoxStream<'static, FlexSensorGloveNotification> {
+    let notifications: Vec<FlexSensorGloveNotification> = csv::ReaderBuilder::new()
         .has_headers(false)
         .from_reader(io::stdin())
         .into_deserialize()

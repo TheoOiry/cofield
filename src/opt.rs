@@ -28,8 +28,18 @@ pub struct Opt {
     #[arg(long, short, default_value = "false")]
     pub verbose: bool,
 
+    #[cfg(feature = "lsl")]
     #[arg(long, default_value = "false")]
     pub lsl: bool,
+
+    #[arg(long)]
+    pub output_raw_data: Option<std::path::PathBuf>,
+}
+
+impl Default for Opt {
+    fn default() -> Self {
+        Self::parse()
+    }
 }
 
 #[derive(Copy, Clone, serde::Serialize, serde::Deserialize)]
