@@ -1,14 +1,17 @@
 mod commands;
-use commands::{
-    ProcessHandle, start_listening_glove
-};
+use commands::{ProcessConfig, ProcessHandle};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(ProcessHandle::new())
+        .manage(ProcessConfig::new())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![start_listening_glove])
+        .invoke_handler(tauri::generate_handler![
+            commands::start_listening_glove,
+            commands::stop_listening_glove,
+            commands::set_aggregation_size,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

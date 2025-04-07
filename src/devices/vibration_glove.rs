@@ -66,6 +66,12 @@ pub struct RandomVibrationModeConfig {
     rng: rand::rngs::ThreadRng,
 }
 
+impl Default for RandomVibrationModeConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RandomVibrationModeConfig {
     pub fn new() -> Self {
         let mut rng = rand::thread_rng();

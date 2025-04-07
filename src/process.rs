@@ -146,6 +146,7 @@ impl<'a, 'b> Process<'a, 'b> {
             let output_row = OutputRow {
                 notification: &aggregated_notification,
                 vibration_state: &vibration_state,
+                moving_fingers: moved_fingers.map(|f| f as u32 * 500),
             };
 
             if let Some(output_writer) = &mut self.output_writer {

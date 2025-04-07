@@ -12,6 +12,7 @@ use crate::{opt::OutputFormat, parser::FlexSensorGloveNotification};
 pub struct OutputRow<'a> {
     pub notification: &'a FlexSensorGloveNotification,
     pub vibration_state: &'a [u8; 5],
+    pub moving_fingers: [u32; 5],
 }
 
 impl Display for OutputRow<'_> {

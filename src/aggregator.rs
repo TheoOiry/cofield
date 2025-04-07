@@ -9,21 +9,24 @@ impl MeanAggregator {
     pub fn new(target_aggregation_size: usize) -> Self {
         assert!(target_aggregation_size > 0);
 
-        Self { rows: vec![], target_aggregation_size }
+        Self {
+            rows: vec![],
+            target_aggregation_size,
+        }
     }
 
     pub fn push_and_aggregate(
         &mut self,
         new_row: FlexSensorGloveNotification,
     ) -> FlexSensorGloveNotification {
-        let len = self.rows.len() as usize;
+        let len = self.rows.len();
 
         if len >= self.target_aggregation_size {
             self.rows.remove(0);
         }
 
         if len <= self.target_aggregation_size {
-            self.rows.push(new_row);            
+            self.rows.push(new_row);
         }
 
         self.aggregate_rows()
@@ -39,6 +42,16 @@ impl MeanAggregator {
         FlexSensorGloveNotification {
             dt: last_row.dt,
             flex_values,
+        }
+    }
+
+    pub fn set_aggregation_size(&mut self, aggregation_size: usize) {
+        assert!(aggregation_size > 0);
+
+        self.target_aggregation_size = aggregation_size;
+
+        if self.rows.len() > aggregation_size {
+            self.rows.drain(0..self.rows.len() - aggregation_size);
         }
     }
 }

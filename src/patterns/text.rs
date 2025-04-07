@@ -50,7 +50,7 @@ impl TextPattern {
     fn apply_value(&mut self, value: u8) {
         if self.current_mode == WritingMode::Numbers {
             if value == 30 {
-                (self.on_char)(&"0");
+                (self.on_char)("0");
             } else {
                 (self.on_char)(value.to_string().as_str());
             }
@@ -60,20 +60,19 @@ impl TextPattern {
 
         match value {
             NUMBER_MODE_VALUE => self.current_mode = WritingMode::Numbers,
-            BACKSPACE_VALUE => (self.on_char)(&"\x08"),
-            DOT_VALUE => (self.on_char)(&"."),
-            SPACE_VALUE => (self.on_char)(&" "),
+            BACKSPACE_VALUE => (self.on_char)("\x08"),
+            DOT_VALUE => (self.on_char)("."),
+            SPACE_VALUE => (self.on_char)(" "),
             _ => (self.on_char)(ALPHABET[value as usize - 1]),
         }
     }
 
     pub fn process_moved_fingers(&mut self, moved_fingers: &[bool; 5], time: DateTime<Local>) {
-        if self.last_hand == *moved_fingers {
-            return;
-        }
-        self.last_hand = *moved_fingers;
+        let new_hand_value = (self.last_hand != *moved_fingers)
+            .then(|| compute_hand_value(moved_fingers))
+            .flatten();
 
-        let new_hand_value = compute_hand_value(moved_fingers);
+        self.last_hand = *moved_fingers;
 
         match (new_hand_value, self.current_value) {
             (Some(new_hand_value), None) => {

@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 
 export type Fingers<T> = [T, T, T, T, T];
 
@@ -20,11 +20,9 @@ const GloveDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [fingersSensibility, setFingersSensibility] = useState<Fingers<number>>(
     [15, 15, 15, 15, 15]
   );
-  const fingersSensibilityRef = useRef(fingersSensibility);
 
   const updateFingersSensibility = (fingersSensibility: Fingers<number>) => {
     setFingersSensibility(fingersSensibility);
-    fingersSensibilityRef.current = fingersSensibility;
   };
 
   const [fingersHighlighted, setFingersHighlited] = useState<Fingers<boolean>>([
@@ -34,26 +32,10 @@ const GloveDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     false,
     false,
   ]);
-  const fingersHighlightedRef = useRef(fingersHighlighted);
 
   useState(() => {
-    listen<FingersNotificationPayload>("glove_notification", (event) => {
-      const fingersValues = event.payload.flexValues;
-
-      const newFingersHighlighted = fingersValues.map(
-        (value, index) => value > fingersSensibilityRef.current[index]
-      );
-
-      if (
-        newFingersHighlighted.some(
-          (highlighted, index) =>
-            highlighted !== fingersHighlightedRef.current[index]
-        )
-      ) {
-        fingersHighlightedRef.current =
-          newFingersHighlighted as Fingers<boolean>;
-        setFingersHighlited(newFingersHighlighted as Fingers<boolean>);
-      }
+    listen<Fingers<boolean>>("moved_fingers", ({ payload }) => {
+      setFingersHighlited(payload);
     });
   });
 

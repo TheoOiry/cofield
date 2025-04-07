@@ -26,3 +26,4 @@ cofield-receiver = { path = "../../" }
 anyhow = "1.0.97"
 tokio = "1.44.1"
 futures = "0.3.31"
+enigo = "0.3.0"

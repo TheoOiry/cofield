@@ -9,7 +9,8 @@ import Box from "@mui/material/Box";
 import Hand from "./components/Hand";
 import TextRetribution from "./components/TextRetribution";
 import { useTheme } from "@mui/material/styles";
-import { Toolbar } from "@mui/material";
+import { AppBar, Toolbar } from "@mui/material";
+import AggregationSizeInput from "./components/AggregationSizeInput";
 
 enum GloveState {
   Disconnected,
@@ -33,9 +34,21 @@ function App() {
     await invoke("start_listening_glove");
   };
 
+  const disconnectGlove = async () => {
+    if (gloveState !== GloveState.Connected) {
+      return;
+    }
+
+    await invoke("stop_listening_glove");
+  };
+
   useState(() => {
     listen("glove_connected", () => {
       setGloveState(GloveState.Connected);
+    });
+
+    listen("glove_disconnected", () => {
+      setGloveState(GloveState.Disconnected);
     });
   });
 
@@ -63,13 +76,15 @@ function App() {
           padding: "10px",
         }}
       >
+        <AppBar color="transparent">
           <Toolbar>
-            <Button
+              <AggregationSizeInput />
+              <Button
                 loading={gloveState === GloveState.Connecting}
                 loadingPosition="end"
                 color={gloveState === GloveState.Connected ? "success" : "primary"}
                 startIcon={connectButtonIcon}
-                onClick={connectGlove}
+                onClick={gloveState === GloveState.Disconnected ? connectGlove : disconnectGlove}
                 variant="outlined"
               >
                 {gloveState === GloveState.Connected
@@ -79,30 +94,8 @@ function App() {
                   : "Connect glove"}
               </Button>
           </Toolbar>
-        {/* <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "10px",
-          }}
-        >
-          <Button
-            loading={gloveState === GloveState.Connecting}
-            loadingPosition="end"
-            color={gloveState === GloveState.Connected ? "success" : "primary"}
-            startIcon={connectButtonIcon}
-            onClick={connectGlove}
-            variant="outlined"
-          >
-            {gloveState === GloveState.Connected
-              ? "Glove connected"
-              : gloveState === GloveState.Connecting
-              ? "Connecting..."
-              : "Connect glove"}
-          </Button>
-        </Box> */}
+        </AppBar>
+        <Toolbar />
         <Hand fingerColor={palette.success.light} isRightHand />
         <TextRetribution />
       </Box>
