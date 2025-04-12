@@ -1,11 +1,10 @@
-import { createContext, ReactNode, useRef, useState } from "react";
+import { createContext, ReactNode, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 
 const BACKSPACE_CHARACTER = "\u0008";
 
 export interface TextWriterContextProps {
   text: string;
-  setLetterApplyDelay: (delay: number) => void;
 }
 
 const TextWriterContext = createContext<TextWriterContextProps | null>(null);
@@ -13,11 +12,6 @@ const TextWriterContext = createContext<TextWriterContextProps | null>(null);
 const TextWriterProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [letterApplyDelay, setLetterApplyDelay] = useState<number>(1000);
-
-  const fingerTemp = useRef<number | null>(null);
-  const writeTimeout = useRef<number | null>(null);
-  
   const [text, setText] = useState<string>("");
   
   useState(() => {
@@ -34,7 +28,6 @@ const TextWriterProvider: React.FC<{ children: ReactNode }> = ({
   return (
     <TextWriterContext.Provider value={{
       text,
-      setLetterApplyDelay,
     }}>
       {children}
     </TextWriterContext.Provider>

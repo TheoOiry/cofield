@@ -54,7 +54,7 @@ pub async fn start_listening_glove(
     let text_patterns = TextPattern::new(Box::new(move |str| {
         let mut enigo = Enigo::new(&Settings::default()).unwrap();
         app_text.emit("new_character", str).ok();
-        enigo.text(str);
+        let _ = enigo.text(&str.to_lowercase());
     }));
 
     let aggregator = Arc::new(Mutex::new(MeanAggregator::new(opt.aggregation_size)));
