@@ -1,18 +1,12 @@
 import Button from "@mui/material/Button";
-import { invoke } from "@tauri-apps/api/core";
-import PianoIcon from '@mui/icons-material/Piano';
-import PianoIconOff from '@mui/icons-material/PianoOff';
-import { useState } from "react";
+import PianoIcon from "@mui/icons-material/Piano";
+import PianoIconOff from "@mui/icons-material/PianoOff";
+import { useContext } from "react";
+import { ProcessConfigContext } from "../providers/ProcessConfig";
 
 const EnableKeyboardSimulationButton = () => {
-  const [isKeyboardEmulationEnabled, setIsKeyboardEmulationEnabled] = useState<boolean>(true);
-
-  const toggleKeyboardEmulation = async () => {
-    setIsKeyboardEmulationEnabled(!isKeyboardEmulationEnabled);
-    await invoke("set_keyboard_emulation_config", {
-        isEnabled: !isKeyboardEmulationEnabled,
-    });
-  };
+  const { isKeyboardEmulationEnabled, toggleKeyboardEmulation } =
+    useContext(ProcessConfigContext)!;
 
   return (
     <Button

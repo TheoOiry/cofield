@@ -9,6 +9,7 @@ import Toolbar from "@mui/material/Toolbar";
 import Box from "@mui/material/Box";
 import BleConnectionButton from "./BleConnectionButton";
 import EnableKeyboardSimulationButton from "./EnableKeyboardSimulationButton";
+import { Typography } from "@mui/material";
 
 export interface ToolbarProps {}
 
@@ -20,22 +21,36 @@ const AppToolbar: React.FC<ToolbarProps> = ({}) => {
       <AppBar color="transparent">
         <Toolbar>
           <BleConnectionButton />
+
+          <Box sx={{ flexGrow: 1 }} />
+
           <IconButton onClick={() => setIsDrawerOpen(true)}>
             <SettingsIcon />
           </IconButton>
         </Toolbar>
       </AppBar>
+      <Toolbar />
+
       <Drawer
         anchor="right"
         open={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
       >
-        <Box sx={{ padding: 3 }}>
+        <Box
+          sx={{
+            display: "flex",
+            padding: 3,
+            alignItems: "center",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <Typography variant="body1">Settings</Typography>
+
           <AggregationSizeInput />
           <EnableKeyboardSimulationButton />
         </Box>
       </Drawer>
-      <Toolbar />
     </>
   );
 };
