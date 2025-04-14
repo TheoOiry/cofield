@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 
 import BluetoothDisabledIcon from "@mui/icons-material/BluetoothDisabled";
 import BluetoothConnectedIcon from "@mui/icons-material/BluetoothConnected";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 enum GloveState {
   Disconnected,
@@ -34,15 +34,20 @@ const BleConnectionButton = () => {
     await invoke("stop_listening_glove");
   };
 
-  useState(() => {
-    listen("glove_connected", () => {
+  useEffect(() => {
+    const unlistenConnected = listen("glove_connected", () => {
       setGloveState(GloveState.Connected);
     });
 
-    listen("glove_disconnected", () => {
+    const unlistenDisonnected = listen("glove_disconnected", () => {
       setGloveState(GloveState.Disconnected);
     });
-  });
+
+    return () => {
+      unlistenConnected.then((unlisten) => unlisten());
+      unlistenDisonnected.then((unlisten) => unlisten());
+    }
+  }, []);
 
   let connectButtonIcon = null;
   switch (gloveState) {

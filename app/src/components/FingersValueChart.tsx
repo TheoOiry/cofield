@@ -2,7 +2,7 @@ import { useTheme } from "@mui/material/styles";
 import { ChartsReferenceLine } from "@mui/x-charts/ChartsReferenceLine";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { listen } from "@tauri-apps/api/event";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Fingers } from "../providers/GloveData";
 import { LineSeriesType } from "@mui/x-charts/models";
 import { DatasetType } from "@mui/x-charts/internals";
@@ -20,7 +20,6 @@ interface GloveSeriesData {
   finger_3: number;
   finger_4: number;
   finger_5: number;
-
 }
 
 const NOTIFICATION_BUFFER_SIZE = 10;
@@ -29,7 +28,7 @@ const MAX_NOTIFICATION_SAVED = 200;
 const LINE_SERIES_CONFIG = {
   type: "line",
   curve: "linear",
-  showMark: false,  
+  showMark: false,
 } as const;
 
 const SERIES: LineSeriesType[] = [
@@ -47,41 +46,46 @@ const FingersValueChart: React.FC<FingersValueChartProps> = ({}) => {
 
   const [dataset, setDataset] = useState<DatasetType>([]);
 
-  useState(() => {
+  useEffect(() => {
     let notificationsBuffer: GloveSeriesData[] = [];
-    listen<GloveNotificationPayload>("glove_notification", ({ payload }) => {
-      const newData: GloveSeriesData = {
-        dt: new Date(payload.dt),
+    const unlisten = listen<GloveNotificationPayload>(
+      "glove_notification",
+      ({ payload }) => {
+        const newData: GloveSeriesData = {
+          dt: new Date(payload.dt),
 
-        finger_1: payload.flexValues[0],
-        finger_2: payload.flexValues[1],
-        finger_3: payload.flexValues[2],
-        finger_4: payload.flexValues[3],
-        finger_5: payload.flexValues[4],
-      };
+          finger_1: payload.flexValues[0],
+          finger_2: payload.flexValues[1],
+          finger_3: payload.flexValues[2],
+          finger_4: payload.flexValues[3],
+          finger_5: payload.flexValues[4],
+        };
 
-      notificationsBuffer.push(newData);
+        notificationsBuffer.push(newData);
 
-      if (notificationsBuffer.length < NOTIFICATION_BUFFER_SIZE) {
-        return;
-      }
-
-      // because `setDataset` is called asynchronously at render time, we need to clean the buffer
-      // at this point, in case of a new notification appears before the render
-      const newRows = notificationsBuffer;
-      notificationsBuffer = [];
-
-      setDataset((prevDataset) => {
-        if (prevDataset.length + NOTIFICATION_BUFFER_SIZE > MAX_NOTIFICATION_SAVED) {
-          prevDataset = prevDataset.slice(
-            prevDataset.length - MAX_NOTIFICATION_SAVED + NOTIFICATION_BUFFER_SIZE
-          );
+        if (notificationsBuffer.length < NOTIFICATION_BUFFER_SIZE) {
+          return;
         }
 
-        return [...prevDataset, ...newRows] as DatasetType;
-      });
-    });
-  });
+        // because `setDataset` is called asynchronously at render time, we need to clean the buffer
+        // at this point, in case of a new notification appears before the render
+        const newRows = notificationsBuffer;
+        notificationsBuffer = [];
+
+        setDataset((prevDataset) => {
+          const newDataset = [...prevDataset, ...newRows];
+
+          newDataset.splice(0, newDataset.length - MAX_NOTIFICATION_SAVED);
+
+          return newDataset as DatasetType;
+        });
+      }
+    );
+
+    return () => {
+      unlisten.then((unlisten) => unlisten());
+    };
+  }, []);
 
   return (
     <LineChart
@@ -97,7 +101,7 @@ const FingersValueChart: React.FC<FingersValueChartProps> = ({}) => {
         y={200}
         label="Moved sensibility"
         lineStyle={{ stroke: palette.success.main }}
-      />  
+      />
     </LineChart>
   );
 };

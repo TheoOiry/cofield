@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useState } from "react";
+import { createContext, ReactNode, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 
 const BACKSPACE_CHARACTER = "\u0008";
@@ -14,16 +14,20 @@ const TextWriterProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [text, setText] = useState<string>("");
   
-  useState(() => {
-    listen<string>("new_character", ({ payload }) => {
+  useEffect(() => {
+    const unlisten = listen<string>("new_character", ({ payload }) => {
       if (payload === BACKSPACE_CHARACTER) {
         setText((prevText) => prevText.slice(0, -1));
         return;
       }
       
       setText((prevText) => prevText + payload);
-    })
-  })
+    });
+
+    return () => {
+      unlisten.then((unlisten) => unlisten());
+    };
+  }, [])
 
   return (
     <TextWriterContext.Provider value={{

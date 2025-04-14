@@ -33,11 +33,15 @@ const GloveDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     false,
   ]);
 
-  useState(() => {
-    listen<Fingers<boolean>>("moved_fingers", ({ payload }) => {
+  useEffect(() => {
+    const unlisten = listen<Fingers<boolean>>("moved_fingers", ({ payload }) => {
       setFingersHighlited(payload);
     });
-  });
+
+    return () => {
+      unlisten.then((unlisten) => unlisten());
+    }
+  }, []);
 
   return (
     <GloveDataContext.Provider
