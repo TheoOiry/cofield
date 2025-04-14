@@ -3,6 +3,7 @@ import Hand from "./components/Hand";
 import TextRetribution from "./components/TextRetribution";
 import { useTheme } from "@mui/material/styles";
 import AppToolbar from "./components/AppToolbar";
+import FingersValueChart from "./components/FingersValueChart";
 
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
       >
         <AppToolbar />
         <Hand fingerColor={palette.success.light} isRightHand />
+        <FingersValueChart />
         <TextRetribution />
 
       </Box>

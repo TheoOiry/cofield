@@ -15,7 +15,7 @@ const EnableKeyboardSimulationButton = () => {
       onClick={toggleKeyboardEmulation}
       variant="outlined"
     >
-      {isKeyboardEmulationEnabled ? "Disable emulation" : "Enable emulation"}
+      {isKeyboardEmulationEnabled ? "Emulation enabled" : "Emulation disabled"}
     </Button>
   );
 };
