@@ -11,6 +11,7 @@ pub fn run() {
             commands::start_listening_glove,
             commands::stop_listening_glove,
             commands::set_aggregation_size,
+            commands::set_keyboard_emulation_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

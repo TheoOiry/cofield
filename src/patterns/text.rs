@@ -1,4 +1,5 @@
 use chrono::{DateTime, Local};
+use enigo::{Enigo, Keyboard, Settings};
 
 const NUMBER_MODE_VALUE: u8 = 27;
 const BACKSPACE_VALUE: u8 = 28;
@@ -26,6 +27,7 @@ pub struct TextPattern {
     last_moved_time: DateTime<Local>,
 
     on_char: Box<dyn Fn(&str) + Send + Sync>,
+    use_keyboard_emulation: bool,
 }
 
 impl TextPattern {
@@ -40,19 +42,24 @@ impl TextPattern {
             last_moved_time: Local::now(),
 
             on_char,
+            use_keyboard_emulation: false,
         }
     }
 
-    pub fn set_max_ms_delay(&mut self, max_ms_delay: u32) {
+    pub fn max_ms_delay(&mut self, max_ms_delay: u32) {
         self.max_ms_delay = max_ms_delay;
+    }
+
+    pub fn use_keyboard_emulation(&mut self, use_keyboard_emulation: bool) {
+        self.use_keyboard_emulation = use_keyboard_emulation;
     }
 
     fn apply_value(&mut self, value: u8) {
         if self.current_mode == WritingMode::Numbers {
             if value == 30 {
-                (self.on_char)("0");
-            } else {
-                (self.on_char)(value.to_string().as_str());
+                self.apply_string_result("0");
+            } else { 
+                self.apply_string_result(value.to_string().as_str());
             }
 
             self.current_mode = WritingMode::Letters;
@@ -60,10 +67,18 @@ impl TextPattern {
 
         match value {
             NUMBER_MODE_VALUE => self.current_mode = WritingMode::Numbers,
-            BACKSPACE_VALUE => (self.on_char)("\x08"),
-            DOT_VALUE => (self.on_char)("."),
-            SPACE_VALUE => (self.on_char)(" "),
-            _ => (self.on_char)(ALPHABET[value as usize - 1]),
+            BACKSPACE_VALUE => self.apply_string_result("\x08"),
+            DOT_VALUE => self.apply_string_result("."),
+            SPACE_VALUE => self.apply_string_result(" "),
+            _ => self.apply_string_result(ALPHABET[value as usize - 1]),
+        }
+    }
+
+    pub fn apply_string_result(&mut self, result: &str) {
+        (self.on_char)(result);
+        if self.use_keyboard_emulation {
+            let mut enigo = Enigo::new(&Settings::default()).unwrap();
+            let _ = enigo.text(&result.to_lowercase());
         }
     }
 

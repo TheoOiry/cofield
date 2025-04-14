@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use cofield_receiver::{flex_sensor_glove::FlexSensorGlove, MeanAggregator, Opt, TextPattern};
-use enigo::{Enigo, Keyboard, Settings};
 use futures::StreamExt;
 use tauri::{AppHandle, Emitter, State};
 use tokio::{sync::Mutex, task::JoinHandle};
@@ -18,6 +17,7 @@ pub struct ProcessHandle {
 
 pub struct ProcessConfig {
     aggregation_size: Mutex<usize>,
+    use_keyboard_emulation: Mutex<bool>,
 }
 
 impl ProcessHandle {
@@ -32,6 +32,7 @@ impl ProcessConfig {
     pub fn new() -> Self {
         Self {
             aggregation_size: Opt::default().aggregation_size.into(),
+            use_keyboard_emulation: true.into(),
         }
     }
 }
@@ -51,11 +52,12 @@ pub async fn start_listening_glove(
     opt.aggregation_size = *process_config.aggregation_size.lock().await;
 
     let app_text = app.clone();
-    let text_patterns = TextPattern::new(Box::new(move |str| {
-        let mut enigo = Enigo::new(&Settings::default()).unwrap();
+    let mut text_patterns = TextPattern::new(Box::new(move |str| {
         app_text.emit("new_character", str).ok();
-        let _ = enigo.text(&str.to_lowercase());
     }));
+
+    let use_keyboard_emulation = *process_config.use_keyboard_emulation.lock().await;
+    text_patterns.use_keyboard_emulation(use_keyboard_emulation);
 
     let aggregator = Arc::new(Mutex::new(MeanAggregator::new(opt.aggregation_size)));
     let text_patterns = Arc::new(Mutex::new(text_patterns));
@@ -146,7 +148,37 @@ pub async fn set_aggregation_size(
         return Ok(());
     };
 
-    glove_process.aggregator.lock().await.set_aggregation_size(aggregation_size);
+    glove_process
+        .aggregator
+        .lock()
+        .await
+        .set_aggregation_size(aggregation_size);
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_keyboard_emulation_config(
+    process_handle: State<'_, ProcessHandle>,
+    process_config: State<'_, ProcessConfig>,
+    is_enabled: bool,
+) -> Result<(), String> {
+    if is_enabled == *process_config.use_keyboard_emulation.lock().await {
+        return Ok(());
+    }
+
+    *process_config.use_keyboard_emulation.lock().await = is_enabled;
+
+    let mut process = process_handle.process.lock().await;
+    let Some(glove_process) = process.as_mut() else {
+        return Ok(());
+    };
+
+    glove_process
+        .text_patterns
+        .lock()
+        .await
+        .use_keyboard_emulation(is_enabled);
 
     Ok(())
 }
