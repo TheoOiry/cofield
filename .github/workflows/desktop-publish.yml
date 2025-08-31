@@ -39,7 +39,8 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf \
-            xdotool
+            libxdo3 \
+            libxdo-dev
 
       - name: setup node
         uses: actions/setup-node@v4
