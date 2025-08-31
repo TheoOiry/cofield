@@ -38,7 +38,8 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            xdotool
 
       - name: setup node
         uses: actions/setup-node@v4
