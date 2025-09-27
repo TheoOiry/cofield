@@ -58,7 +58,7 @@ impl TextPattern {
         if self.current_mode == WritingMode::Numbers {
             if value == 30 {
                 self.apply_string_result("0");
-            } else { 
+            } else {
                 self.apply_string_result(value.to_string().as_str());
             }
 

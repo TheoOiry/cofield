@@ -11,7 +11,6 @@ use crate::{opt::OutputFormat, parser::FlexSensorGloveNotification};
 #[serde(rename_all = "camelCase")]
 pub struct OutputRow<'a> {
     pub notification: &'a FlexSensorGloveNotification,
-    pub vibration_state: &'a [u8; 5],
     pub moving_fingers: [u32; 5],
 }
 
@@ -19,8 +18,8 @@ impl Display for OutputRow<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
-            "{}: values: {:?} vibrations: {:?}",
-            self.notification.dt, self.notification.flex_values, self.vibration_state
+            "{}: values: {:?}, moving: {:?}",
+            self.notification.dt, self.notification.flex_values, self.moving_fingers
         )
     }
 }

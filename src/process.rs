@@ -5,7 +5,6 @@ use lsl::Pushable;
 
 use crate::{
     aggregator::MeanAggregator,
-    devices::{RandomVibrationModeConfig, VibrationGlove, VibrationMode},
     opt::FingersSensibility,
     output::OutputRow,
     patterns::{
@@ -14,8 +13,7 @@ use crate::{
     },
 };
 
-pub struct Process<'a, 'b> {
-    vibration_glove: Option<&'b mut VibrationGlove>,
+pub struct Process<'a> {
     fingers_sensibility: FingersSensibility,
 
     notification_stream: futures::stream::BoxStream<'a, crate::parser::FlexSensorGloveNotification>,
@@ -32,7 +30,7 @@ pub struct Process<'a, 'b> {
     is_lucid_dreaming: bool,
 }
 
-impl<'a, 'b> Process<'a, 'b> {
+impl<'a> Process<'a> {
     pub async fn new(
         notification_stream: futures::stream::BoxStream<
             'a,
@@ -61,17 +59,12 @@ impl<'a, 'b> Process<'a, 'b> {
             lucid_dream_detection_pattern,
 
             is_lucid_dreaming: false,
-            vibration_glove: None,
             output_writer: None,
             raw_data_writer: None,
 
             #[cfg(feature = "lsl")]
             lsl_stream_outlet: None,
         })
-    }
-
-    pub fn set_vibration_glove(&mut self, vibration_glove: &'b mut VibrationGlove) {
-        self.vibration_glove = Some(vibration_glove);
     }
 
     pub fn set_output_writer(
@@ -125,27 +118,8 @@ impl<'a, 'b> Process<'a, 'b> {
                 self.is_lucid_dreaming = self.lucid_dream_detection_pattern.nb_done >= 3;
             }
 
-            let vibration_state = if let Some(vibration_glove) = &mut self.vibration_glove {
-                vibration_glove
-                    .process_moved_fingers(&moved_fingers, aggregated_notification.dt)
-                    .await?;
-
-                if self.is_lucid_dreaming
-                    && !matches!(vibration_glove.vibration_mode, VibrationMode::Random(_))
-                {
-                    vibration_glove.set_vibration_mode(VibrationMode::Random(
-                        RandomVibrationModeConfig::new(),
-                    ));
-                }
-
-                vibration_glove.get_last_state()
-            } else {
-                Default::default()
-            };
-
             let output_row = OutputRow {
                 notification: &aggregated_notification,
-                vibration_state: &vibration_state,
                 moving_fingers: moved_fingers.map(|f| f as u32 * 500),
             };
 

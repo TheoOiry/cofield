@@ -13,17 +13,11 @@ pub struct Opt {
     #[arg(long, default_value = "FlexSensorGlove")]
     pub output_glove_name: String,
 
-    #[arg(long)]
-    pub input_glove_name: Option<String>,
-
     #[arg(long, default_value = "10")]
     pub aggregation_size: usize,
 
     #[arg(long, default_value = "[15, 15, 15, 15, 15]")]
     pub fingers_sensibility: FingersSensibility,
-
-    #[arg(long, default_value = "255")]
-    pub vibration_intensity: u8,
 
     #[arg(long, short, default_value = "false")]
     pub verbose: bool,

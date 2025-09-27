@@ -7,12 +7,9 @@ use uuid::Uuid;
 use crate::print_info;
 
 pub mod flex_sensor_glove;
-pub mod vibration_glove;
 
 const _FLEX_SENSOR_GLOVE_SERVICE_UUID: Uuid =
     Uuid::from_u128(0xf5874094_9074_4bb6_9257_f3593d73d836);
-
-pub use vibration_glove::*;
 
 async fn find_characteristic(
     peripheral: &PlatformPeripheral,
