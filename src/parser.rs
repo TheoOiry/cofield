@@ -9,11 +9,13 @@ use serde::{Deserialize, Serialize};
 
 use crate::opt::FingersSensibility;
 
+pub type MovingFingers = [bool; 5];
+
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct FingersFlexValues(pub [u32; 5]);
 
 impl FingersFlexValues {
-    pub fn detect_moved_fingers(&self, sensibility: &FingersSensibility) -> [bool; 5] {
+    pub fn detect_moved_fingers(&self, sensibility: &FingersSensibility) -> MovingFingers {
         let mut moved_fingers = [false; 5];
 
         self.0.iter().enumerate().for_each(|(i, &value)| {

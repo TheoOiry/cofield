@@ -3,14 +3,9 @@ import { ChartsReferenceLine } from "@mui/x-charts/ChartsReferenceLine";
 import { LineChart } from "@mui/x-charts/LineChart";
 import { listen } from "@tauri-apps/api/event";
 import React, { useEffect, useState } from "react";
-import { Fingers } from "../providers/GloveData";
+import { NotificationPayload } from "../providers/GloveData";
 import { LineSeriesType } from "@mui/x-charts/models";
 import { DatasetType } from "@mui/x-charts/internals";
-
-interface GloveNotificationPayload {
-  dt: string;
-  flexValues: Fingers<number>;
-}
 
 interface GloveSeriesData {
   dt: Date;
@@ -48,17 +43,17 @@ const FingersValueChart: React.FC<FingersValueChartProps> = ({}) => {
 
   useEffect(() => {
     let notificationsBuffer: GloveSeriesData[] = [];
-    const unlisten = listen<GloveNotificationPayload>(
+    const unlisten = listen<NotificationPayload>(
       "glove_notification",
-      ({ payload }) => {
+      ({ payload: { notification } }) => {
         const newData: GloveSeriesData = {
-          dt: new Date(payload.dt),
+          dt: new Date(notification.dt),
 
-          finger_1: payload.flexValues[0],
-          finger_2: payload.flexValues[1],
-          finger_3: payload.flexValues[2],
-          finger_4: payload.flexValues[3],
-          finger_5: payload.flexValues[4],
+          finger_1: notification.flexValues[0],
+          finger_2: notification.flexValues[1],
+          finger_3: notification.flexValues[2],
+          finger_4: notification.flexValues[3],
+          finger_5: notification.flexValues[4],
         };
 
         notificationsBuffer.push(newData);

@@ -1,34 +1,30 @@
+use std::sync::Arc;
+
 use futures::StreamExt;
 
 #[cfg(feature = "lsl")]
 use lsl::Pushable;
+use tokio::sync::Mutex;
 
 use crate::{
-    aggregator::MeanAggregator,
-    opt::FingersSensibility,
-    output::OutputRow,
-    patterns::{
-        Pattern, ReapeatingPattern, DEFAULT_PATTERN_MAX_DELAY, DEFAULT_REPEATING_PATTERN_DELAY,
-        FINGERS_ORDER,
-    },
-    OutputWriterDyn,
+    FlexSensorGloveNotification, MovingFingers, OutputWriterDyn, TextPattern, aggregator::MeanAggregator, opt::FingersSensibility, output::OutputRow
 };
 
 pub struct Process<'a> {
     fingers_sensibility: FingersSensibility,
 
     notification_stream: futures::stream::BoxStream<'a, crate::parser::FlexSensorGloveNotification>,
-    aggregator: Option<MeanAggregator>,
 
-    output_writer: Option<OutputWriterDyn>,
+    aggregator: Arc<Mutex<Option<MeanAggregator>>>,
+    output_writer: Arc<Mutex<Option<OutputWriterDyn>>>,
+    raw_output_writer: Arc<Mutex<Option<csv::Writer<std::fs::File>>>>,
+    text_pattern_detection: Arc<Mutex<Option<TextPattern>>>,
+
+    on_notification: Option<Box<dyn FnMut(&FlexSensorGloveNotification, MovingFingers) + Send + Sync>>,
 
     #[cfg(feature = "lsl")]
     lsl_stream_outlet: Option<lsl::StreamOutlet>,
 
-    raw_data_writer: Option<csv::Writer<std::fs::File>>,
-
-    lucid_dream_detection_pattern: ReapeatingPattern,
-    is_lucid_dreaming: bool,
 }
 
 impl<'a> Process<'a> {
@@ -37,55 +33,42 @@ impl<'a> Process<'a> {
             'a,
             crate::parser::FlexSensorGloveNotification,
         >,
-        aggregation_size: usize,
         fingers_sensibility: FingersSensibility,
-    ) -> anyhow::Result<Self> {
-        let aggregator = if aggregation_size > 0 {
-            Some(MeanAggregator::new(aggregation_size))
-        } else {
-            None
-        };
-
-        let lucid_dream_detection_pattern =
-            Pattern::new(FINGERS_ORDER.to_vec(), DEFAULT_PATTERN_MAX_DELAY);
-        let lucid_dream_detection_pattern = ReapeatingPattern::new(
-            lucid_dream_detection_pattern,
-            DEFAULT_REPEATING_PATTERN_DELAY,
-        );
-
-        Ok(Self {
+    ) -> Self {
+        Self {
             fingers_sensibility,
             notification_stream: notification_stream.boxed(),
-            aggregator,
-            lucid_dream_detection_pattern,
 
-            is_lucid_dreaming: false,
-            output_writer: None,
-            raw_data_writer: None,
+            aggregator: Arc::new(Mutex::new(None)),
+            output_writer: Arc::new(Mutex::new(None)),
+            raw_output_writer: Arc::new(Mutex::new(None)),
+            text_pattern_detection: Arc::new(Mutex::new(None)),
+
+            on_notification: None,
 
             #[cfg(feature = "lsl")]
             lsl_stream_outlet: None,
-        })
+        }
     }
 
-    pub fn set_output_writer(&mut self, output_writer: Option<OutputWriterDyn>) {
+    pub fn set_output_writer(&mut self, output_writer: Arc<Mutex<Option<OutputWriterDyn>>>) {
         self.output_writer = output_writer;
     }
 
-    pub fn set_output_raw_data(
-        &mut self,
-        output_raw_data: Option<std::path::PathBuf>,
-    ) -> anyhow::Result<()> {
-        self.raw_data_writer = match output_raw_data {
-            Some(output_raw_data) => Some(
-                csv::WriterBuilder::new()
-                    .has_headers(false)
-                    .from_path(output_raw_data)?,
-            ),
-            None => None,
-        };
+    pub fn set_raw_output_writer(&mut self, raw_output_writer: Arc<Mutex<Option<csv::Writer<std::fs::File>>>>) {
+        self.raw_output_writer = raw_output_writer;
+    }
 
-        Ok(())
+    pub fn set_aggregator(&mut self, aggregator: Arc<Mutex<Option<MeanAggregator>>>) {
+        self.aggregator = aggregator;
+    }
+
+    pub fn set_text_pattern_detection(&mut self, text_pattern_detection: Arc<Mutex<Option<TextPattern>>>) {
+        self.text_pattern_detection = text_pattern_detection;
+    }
+
+    pub fn on_notification(&mut self, closure: impl FnMut(&FlexSensorGloveNotification, MovingFingers) + Send + Sync + 'static) {
+        self.on_notification = Some(Box::new(closure))
     }
 
     #[cfg(feature = "lsl")]
@@ -95,12 +78,12 @@ impl<'a> Process<'a> {
 
     pub async fn run(&mut self) -> anyhow::Result<()> {
         while let Some(notification) = self.notification_stream.next().await {
-            if let Some(raw_data_writer) = &mut self.raw_data_writer {
+            if let Some(raw_data_writer) = self.raw_output_writer.lock().await.as_mut() {
                 raw_data_writer.serialize(&notification)?;
                 raw_data_writer.flush()?;
             }
 
-            let aggregated_notification = if let Some(aggregator) = &mut self.aggregator {
+            let aggregated_notification = if let Some(aggregator) = self.aggregator.lock().await.as_mut() {
                 aggregator.push_and_aggregate(notification)
             } else {
                 notification
@@ -110,10 +93,8 @@ impl<'a> Process<'a> {
                 .flex_values
                 .detect_moved_fingers(&self.fingers_sensibility);
 
-            if !self.is_lucid_dreaming {
-                self.lucid_dream_detection_pattern
-                    .process_moved_fingers(&moved_fingers, aggregated_notification.dt);
-                self.is_lucid_dreaming = self.lucid_dream_detection_pattern.nb_done >= 3;
+            if let Some(on_notification) = self.on_notification.as_mut() {
+                on_notification(&aggregated_notification, moved_fingers)
             }
 
             let output_row = OutputRow {
@@ -121,8 +102,12 @@ impl<'a> Process<'a> {
                 moving_fingers: moved_fingers.map(|f| f as u32 * 500),
             };
 
-            if let Some(output_writer) = &mut self.output_writer {
+            if let Some(output_writer) = self.output_writer.lock().await.as_mut() {
                 output_writer.write_row(&output_row)?;
+            }
+
+            if let Some(text_pattern) = self.text_pattern_detection.lock().await.as_mut() {
+                text_pattern.process_moved_fingers(&moved_fingers, aggregated_notification.dt);
             }
 
             #[cfg(feature = "lsl")]

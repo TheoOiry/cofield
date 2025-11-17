@@ -1,5 +1,7 @@
 use clap::{Parser, ValueEnum};
 
+use crate::MeanAggregator;
+
 #[derive(Parser)]
 pub struct Opt {
     /// Read from stdin to get the glove notifications in csv format.
@@ -53,4 +55,14 @@ pub enum OutputFormat {
     #[default]
     Pretty,
     Csv,
+}
+
+impl Opt {
+    pub fn get_mean_aggregator(&self) -> Option<MeanAggregator> {
+        if self.aggregation_size > 0 {
+            Some(MeanAggregator::new(self.aggregation_size))
+        } else {
+            None
+        }
+    }
 }

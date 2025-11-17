@@ -3,15 +3,15 @@ use std::{
     sync::Arc,
 };
 
-use cofield_receiver::{flex_sensor_glove::FlexSensorGlove, MeanAggregator, Opt, TextPattern};
-use futures::StreamExt;
+use cofield_receiver::{FlexSensorGloveNotification, MeanAggregator, MovingFingers, Opt, Process, TextPattern, flex_sensor_glove::FlexSensorGlove};
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 use tokio::{sync::Mutex, task::JoinHandle};
 
 struct GloveProcess {
     process: JoinHandle<()>,
-    text_patterns: Arc<Mutex<TextPattern>>,
-    aggregator: Arc<Mutex<MeanAggregator>>,
+    text_patterns: Arc<Mutex<Option<TextPattern>>>,
+    aggregator: Arc<Mutex<Option<MeanAggregator>>>,
     raw_output_writer: Arc<Mutex<Option<csv::Writer<std::fs::File>>>>,
 }
 
@@ -30,6 +30,13 @@ impl ProcessHandle {
             process: Mutex::new(None),
         }
     }
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct NotificationPayload {
+    notification: FlexSensorGloveNotification,
+    moved_fingers: MovingFingers,
 }
 
 impl ProcessConfig {
@@ -63,8 +70,8 @@ pub async fn start_listening_glove(
     let use_keyboard_emulation = *process_config.use_keyboard_emulation.lock().await;
     text_patterns.use_keyboard_emulation(use_keyboard_emulation);
 
-    let aggregator = Arc::new(Mutex::new(MeanAggregator::new(opt.aggregation_size)));
-    let text_patterns = Arc::new(Mutex::new(text_patterns));
+    let aggregator = Arc::new(Mutex::new(Some(MeanAggregator::new(opt.aggregation_size))));
+    let text_patterns = Arc::new(Mutex::new(Some(text_patterns)));
     let raw_output_writer = Arc::new(Mutex::new(None::<csv::Writer<std::fs::File>>));
 
     let process_aggregator = aggregator.clone();
@@ -77,7 +84,7 @@ pub async fn start_listening_glove(
             .map_err(|err| err.to_string())
             .unwrap();
 
-        let mut notification_stream = Box::pin(
+        let notification_stream = Box::pin(
             flex_sensor_glove
                 .get_notifications_stream()
                 .await
@@ -87,35 +94,18 @@ pub async fn start_listening_glove(
 
         app.emit("glove_connected", ()).unwrap();
 
-        while let Some(notification) = notification_stream.next().await {
-            if let Some(raw_output_writer) = process_raw_output_writer.lock().await.as_mut() {
-                if let Err(err) = raw_output_writer.serialize(&notification) {
-                    eprintln!("ERROR: Failed to write raw notification to CSV: {err}");
-                }
+        let mut process = Process::new(notification_stream, opt.fingers_sensibility).await;
 
-                if let Err(err) = raw_output_writer.flush() {
-                    eprintln!("ERROR: Failed to flush raw notification CSV writer: {err}");
-                }
-            }
+        process.set_aggregator(process_aggregator);
+        process.set_text_pattern_detection(process_text_patterns);
+        process.set_raw_output_writer(process_raw_output_writer);
+        process.on_notification(move |notification, moved_fingers| { 
+            app.emit("glove_notification", NotificationPayload {
+            notification: notification.clone(), 
+            moved_fingers
+        }).ok();});
 
-            let notification = process_aggregator
-                .lock()
-                .await
-                .push_and_aggregate(notification);
-
-            app.emit("glove_notification", notification.clone()).ok();
-
-            let moved_fingers = notification
-                .flex_values
-                .detect_moved_fingers(&opt.fingers_sensibility);
-
-            app.emit("moved_fingers", moved_fingers).ok();
-
-            process_text_patterns
-                .lock()
-                .await
-                .process_moved_fingers(&moved_fingers, notification.dt);
-        }
+        process.run().await.expect("An error occured while running process");
     });
 
     *process_handle.process.lock().await = Some(GloveProcess {
@@ -169,7 +159,8 @@ pub async fn set_aggregation_size(
         .aggregator
         .lock()
         .await
-        .set_aggregation_size(aggregation_size);
+        .as_mut()
+        .map(|aggregator| aggregator.set_aggregation_size(aggregation_size));
 
     Ok(())
 }
@@ -195,7 +186,8 @@ pub async fn set_keyboard_emulation_config(
         .text_patterns
         .lock()
         .await
-        .use_keyboard_emulation(is_enabled);
+        .as_mut()
+        .map(|text_patterns| text_patterns.use_keyboard_emulation(is_enabled));
 
     Ok(())
 }

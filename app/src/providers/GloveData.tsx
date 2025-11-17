@@ -3,7 +3,13 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 
 export type Fingers<T> = [T, T, T, T, T];
 
-export interface FingersNotificationPayload {
+export interface NotificationPayload {
+  notification: FingersNotification;
+  movedFingers: Fingers<boolean>;
+}
+
+export interface FingersNotification {
+  dt: string;
   flexValues: Fingers<number>;
 }
 
@@ -34,8 +40,8 @@ const GloveDataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   ]);
 
   useEffect(() => {
-    const unlisten = listen<Fingers<boolean>>("moved_fingers", ({ payload }) => {
-      setFingersHighlited(payload);
+    const unlisten = listen<NotificationPayload>("glove_notification", ({ payload }) => {
+      setFingersHighlited(payload.movedFingers);
     });
 
     return () => {

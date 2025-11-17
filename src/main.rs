@@ -1,5 +1,5 @@
 use core::str;
-use std::io;
+use std::{io, sync::Arc};
 
 use clap::Parser;
 use cofield_receiver::{
@@ -8,6 +8,7 @@ use cofield_receiver::{
 use console::style;
 use dotenv::dotenv;
 use futures::{stream::BoxStream, StreamExt};
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
@@ -42,12 +43,12 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
 
     let mut process = Process::new(
         notification_stream,
-        opt.aggregation_size,
         opt.fingers_sensibility,
     )
-    .await?;
+    .await;
 
-    process.set_output_writer(Some(output_writer));
+    process.set_aggregator(Arc::new(Mutex::new(opt.get_mean_aggregator())));
+    process.set_output_writer(Arc::new(Mutex::new(Some(output_writer))));
 
     #[cfg(feature = "lsl")]
     if opt.lsl {
@@ -66,12 +67,13 @@ async fn run_with_stdin(opt: Opt) -> anyhow::Result<()> {
 
     let mut process = Process::new(
         notification_stream,
-        opt.aggregation_size,
         opt.fingers_sensibility,
     )
-    .await?;
+    .await;
 
-    process.set_output_writer(Some(output_writer));
+    process.set_aggregator(Arc::new(Mutex::new(opt.get_mean_aggregator())));
+    process.set_output_writer(Arc::new(Mutex::new(Some(output_writer))));
+
     process.run().await?;
 
     Ok(())
