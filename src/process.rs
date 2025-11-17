@@ -7,8 +7,11 @@ use lsl::Pushable;
 use tokio::sync::Mutex;
 
 use crate::{
-    FlexSensorGloveNotification, MovingFingers, OutputWriterDyn, TextPattern, aggregator::MeanAggregator, opt::FingersSensibility, output::OutputRow
+    aggregator::MeanAggregator, opt::FingersSensibility, output::OutputRow,
+    FlexSensorGloveNotification, MovingFingers, OutputWriterDyn, TextPattern,
 };
+
+pub type NotificationFn = Box<dyn FnMut(&FlexSensorGloveNotification, MovingFingers) + Send + Sync>;
 
 pub struct Process<'a> {
     fingers_sensibility: FingersSensibility,
@@ -20,11 +23,10 @@ pub struct Process<'a> {
     raw_output_writer: Arc<Mutex<Option<csv::Writer<std::fs::File>>>>,
     text_pattern_detection: Arc<Mutex<Option<TextPattern>>>,
 
-    on_notification: Option<Box<dyn FnMut(&FlexSensorGloveNotification, MovingFingers) + Send + Sync>>,
+    on_notification: Option<NotificationFn>,
 
     #[cfg(feature = "lsl")]
     lsl_stream_outlet: Option<lsl::StreamOutlet>,
-
 }
 
 impl<'a> Process<'a> {
@@ -55,7 +57,10 @@ impl<'a> Process<'a> {
         self.output_writer = output_writer;
     }
 
-    pub fn set_raw_output_writer(&mut self, raw_output_writer: Arc<Mutex<Option<csv::Writer<std::fs::File>>>>) {
+    pub fn set_raw_output_writer(
+        &mut self,
+        raw_output_writer: Arc<Mutex<Option<csv::Writer<std::fs::File>>>>,
+    ) {
         self.raw_output_writer = raw_output_writer;
     }
 
@@ -63,11 +68,17 @@ impl<'a> Process<'a> {
         self.aggregator = aggregator;
     }
 
-    pub fn set_text_pattern_detection(&mut self, text_pattern_detection: Arc<Mutex<Option<TextPattern>>>) {
+    pub fn set_text_pattern_detection(
+        &mut self,
+        text_pattern_detection: Arc<Mutex<Option<TextPattern>>>,
+    ) {
         self.text_pattern_detection = text_pattern_detection;
     }
 
-    pub fn on_notification(&mut self, closure: impl FnMut(&FlexSensorGloveNotification, MovingFingers) + Send + Sync + 'static) {
+    pub fn on_notification(
+        &mut self,
+        closure: impl FnMut(&FlexSensorGloveNotification, MovingFingers) + Send + Sync + 'static,
+    ) {
         self.on_notification = Some(Box::new(closure))
     }
 
@@ -83,11 +94,12 @@ impl<'a> Process<'a> {
                 raw_data_writer.flush()?;
             }
 
-            let aggregated_notification = if let Some(aggregator) = self.aggregator.lock().await.as_mut() {
-                aggregator.push_and_aggregate(notification)
-            } else {
-                notification
-            };
+            let aggregated_notification =
+                if let Some(aggregator) = self.aggregator.lock().await.as_mut() {
+                    aggregator.push_and_aggregate(notification)
+                } else {
+                    notification
+                };
 
             let moved_fingers = aggregated_notification
                 .flex_values

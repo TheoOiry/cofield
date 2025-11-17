@@ -41,11 +41,7 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
         print_info("Reading notifications...");
     }
 
-    let mut process = Process::new(
-        notification_stream,
-        opt.fingers_sensibility,
-    )
-    .await;
+    let mut process = Process::new(notification_stream, opt.fingers_sensibility).await;
 
     process.set_aggregator(Arc::new(Mutex::new(opt.get_mean_aggregator())));
     process.set_output_writer(Arc::new(Mutex::new(Some(output_writer))));
@@ -65,11 +61,7 @@ async fn run_with_stdin(opt: Opt) -> anyhow::Result<()> {
     let output_writer = opt.output_format.create_writer();
     let notification_stream = get_stdin_csv_notification_stream().await;
 
-    let mut process = Process::new(
-        notification_stream,
-        opt.fingers_sensibility,
-    )
-    .await;
+    let mut process = Process::new(notification_stream, opt.fingers_sensibility).await;
 
     process.set_aggregator(Arc::new(Mutex::new(opt.get_mean_aggregator())));
     process.set_output_writer(Arc::new(Mutex::new(Some(output_writer))));

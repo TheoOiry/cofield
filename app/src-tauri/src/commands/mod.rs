@@ -3,7 +3,10 @@ use std::{
     sync::Arc,
 };
 
-use cofield_receiver::{FlexSensorGloveNotification, MeanAggregator, MovingFingers, Opt, Process, TextPattern, flex_sensor_glove::FlexSensorGlove};
+use cofield_receiver::{
+    flex_sensor_glove::FlexSensorGlove, FlexSensorGloveNotification, MeanAggregator, MovingFingers,
+    Opt, Process, TextPattern,
+};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 use tokio::{sync::Mutex, task::JoinHandle};
@@ -99,13 +102,21 @@ pub async fn start_listening_glove(
         process.set_aggregator(process_aggregator);
         process.set_text_pattern_detection(process_text_patterns);
         process.set_raw_output_writer(process_raw_output_writer);
-        process.on_notification(move |notification, moved_fingers| { 
-            app.emit("glove_notification", NotificationPayload {
-            notification: notification.clone(), 
-            moved_fingers
-        }).ok();});
+        process.on_notification(move |notification, moved_fingers| {
+            app.emit(
+                "glove_notification",
+                NotificationPayload {
+                    notification: notification.clone(),
+                    moved_fingers,
+                },
+            )
+            .ok();
+        });
 
-        process.run().await.expect("An error occured while running process");
+        process
+            .run()
+            .await
+            .expect("An error occured while running process");
     });
 
     *process_handle.process.lock().await = Some(GloveProcess {
