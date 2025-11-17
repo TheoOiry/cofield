@@ -4,7 +4,7 @@ import TextRetribution from "./components/TextRetribution";
 import { useTheme } from "@mui/material/styles";
 import AppToolbar from "./components/AppToolbar";
 import FingersValueChart from "./components/FingersValueChart";
-
+import { ToastContainer } from "react-toastify";
 
 function App() {
   
@@ -23,6 +23,7 @@ function App() {
           padding: "10px",
         }}
       >
+        <ToastContainer />
         <AppToolbar />
         <Hand fingerColor={palette.success.light} isRightHand />
         <FingersValueChart />

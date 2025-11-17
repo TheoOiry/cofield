@@ -4,6 +4,7 @@ use clap::{Parser, ValueEnum};
 pub struct Opt {
     /// Read from stdin to get the glove notifications in csv format.
     /// In this mode, the gloves are not used and lsl is disabled
+    /// This is useful to process previously recorded data with different settings
     #[arg(long, default_value = "false")]
     pub input_from_stdin: bool,
 

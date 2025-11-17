@@ -13,6 +13,7 @@ const EnableKeyboardSimulationButton = () => {
       color={isKeyboardEmulationEnabled ? "success" : "primary"}
       startIcon={isKeyboardEmulationEnabled ? <PianoIcon /> : <PianoIconOff />}
       onClick={toggleKeyboardEmulation}
+      fullWidth
       variant="outlined"
     >
       {isKeyboardEmulationEnabled ? "Emulation enabled" : "Emulation disabled"}

@@ -10,6 +10,8 @@ import Box from "@mui/material/Box";
 import BleConnectionButton from "./BleConnectionButton";
 import EnableKeyboardSimulationButton from "./EnableKeyboardSimulationButton";
 import { Typography } from "@mui/material";
+import RecordButton from "./RecordButton";
+import EditFolderPath from "./EditFolderPath";
 
 export interface ToolbarProps {}
 
@@ -19,8 +21,9 @@ const AppToolbar: React.FC<ToolbarProps> = ({}) => {
   return (
     <>
       <AppBar color="transparent">
-        <Toolbar>
+        <Toolbar sx={{ gap: 2 }}>
           <BleConnectionButton />
+          <RecordButton />
 
           <Box sx={{ flexGrow: 1 }} />
 
@@ -43,10 +46,12 @@ const AppToolbar: React.FC<ToolbarProps> = ({}) => {
             alignItems: "center",
             flexDirection: "column",
             gap: 2,
+            width: "300px",
           }}
         >
           <Typography variant="body1">Settings</Typography>
 
+          <EditFolderPath />
           <AggregationSizeInput />
           <EnableKeyboardSimulationButton />
         </Box>

@@ -22,6 +22,7 @@ async fn main() {
 }
 
 fn print_info(str: &str) {
+    // We print out logs to stderr to not interfere with stdout data
     eprintln!("{} {str}", style("INFO:").bold().cyan());
 }
 
@@ -46,7 +47,7 @@ async fn run(opt: Opt) -> anyhow::Result<()> {
     )
     .await?;
 
-    process.set_output_writer(output_writer);
+    process.set_output_writer(Some(output_writer));
 
     #[cfg(feature = "lsl")]
     if opt.lsl {
@@ -70,7 +71,7 @@ async fn run_with_stdin(opt: Opt) -> anyhow::Result<()> {
     )
     .await?;
 
-    process.set_output_writer(output_writer);
+    process.set_output_writer(Some(output_writer));
     process.run().await?;
 
     Ok(())

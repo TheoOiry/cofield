@@ -11,6 +11,7 @@ use crate::{
         Pattern, ReapeatingPattern, DEFAULT_PATTERN_MAX_DELAY, DEFAULT_REPEATING_PATTERN_DELAY,
         FINGERS_ORDER,
     },
+    OutputWriterDyn,
 };
 
 pub struct Process<'a> {
@@ -19,7 +20,7 @@ pub struct Process<'a> {
     notification_stream: futures::stream::BoxStream<'a, crate::parser::FlexSensorGloveNotification>,
     aggregator: Option<MeanAggregator>,
 
-    output_writer: Option<Box<dyn crate::output::OutputWriter + Send>>,
+    output_writer: Option<OutputWriterDyn>,
 
     #[cfg(feature = "lsl")]
     lsl_stream_outlet: Option<lsl::StreamOutlet>,
@@ -67,11 +68,8 @@ impl<'a> Process<'a> {
         })
     }
 
-    pub fn set_output_writer(
-        &mut self,
-        output_writer: Box<dyn crate::output::OutputWriter + Send>,
-    ) {
-        self.output_writer = Some(output_writer);
+    pub fn set_output_writer(&mut self, output_writer: Option<OutputWriterDyn>) {
+        self.output_writer = output_writer;
     }
 
     pub fn set_output_raw_data(

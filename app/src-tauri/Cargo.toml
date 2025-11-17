@@ -26,3 +26,7 @@ cofield-receiver = { path = "../../" }
 anyhow = "1.0.97"
 tokio = "1.44.1"
 futures = "0.3.31"
+csv = "1.4.0"
+chrono = "0.4.42"
+tauri-plugin-store = "2"
+tauri-plugin-dialog = "2"

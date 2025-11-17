@@ -28,6 +28,8 @@ pub trait OutputWriter {
     fn write_row(&mut self, record: &OutputRow) -> anyhow::Result<()>;
 }
 
+pub type OutputWriterDyn = Box<dyn OutputWriter + Send>;
+
 struct PrettyWriter;
 
 impl OutputWriter for PrettyWriter {

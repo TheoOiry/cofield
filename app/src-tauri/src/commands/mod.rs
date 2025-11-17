@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use cofield_receiver::{flex_sensor_glove::FlexSensorGlove, MeanAggregator, Opt, TextPattern};
 use futures::StreamExt;
@@ -9,6 +12,7 @@ struct GloveProcess {
     process: JoinHandle<()>,
     text_patterns: Arc<Mutex<TextPattern>>,
     aggregator: Arc<Mutex<MeanAggregator>>,
+    raw_output_writer: Arc<Mutex<Option<csv::Writer<std::fs::File>>>>,
 }
 
 pub struct ProcessHandle {
@@ -61,9 +65,11 @@ pub async fn start_listening_glove(
 
     let aggregator = Arc::new(Mutex::new(MeanAggregator::new(opt.aggregation_size)));
     let text_patterns = Arc::new(Mutex::new(text_patterns));
+    let raw_output_writer = Arc::new(Mutex::new(None::<csv::Writer<std::fs::File>>));
 
     let process_aggregator = aggregator.clone();
     let process_text_patterns = text_patterns.clone();
+    let process_raw_output_writer = raw_output_writer.clone();
 
     let handle = tokio::spawn(async move {
         let flex_sensor_glove = FlexSensorGlove::new(&opt)
@@ -82,6 +88,16 @@ pub async fn start_listening_glove(
         app.emit("glove_connected", ()).unwrap();
 
         while let Some(notification) = notification_stream.next().await {
+            if let Some(raw_output_writer) = process_raw_output_writer.lock().await.as_mut() {
+                if let Err(err) = raw_output_writer.serialize(&notification) {
+                    eprintln!("ERROR: Failed to write raw notification to CSV: {err}");
+                }
+
+                if let Err(err) = raw_output_writer.flush() {
+                    eprintln!("ERROR: Failed to flush raw notification CSV writer: {err}");
+                }
+            }
+
             let notification = process_aggregator
                 .lock()
                 .await
@@ -106,6 +122,7 @@ pub async fn start_listening_glove(
         process: handle,
         text_patterns,
         aggregator,
+        raw_output_writer,
     });
 
     Ok(())
@@ -181,4 +198,38 @@ pub async fn set_keyboard_emulation_config(
         .use_keyboard_emulation(is_enabled);
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn set_output_raw_data(
+    process_handle: State<'_, ProcessHandle>,
+    folder_path: Option<String>,
+) -> Result<Option<PathBuf>, String> {
+    let mut process = process_handle.process.lock().await;
+    let Some(glove_process) = process.as_mut() else {
+        return Ok(None);
+    };
+
+    let file_path = folder_path.map(|path| {
+        let timestamp = chrono::Local::now().format("%Y-%m-%d-%H-%M-%S").to_string();
+        let file_name = format!("raw_{timestamp}.csv");
+
+        Path::new(&path).join(file_name)
+    });
+
+    let writer = match &file_path {
+        Some(file_path) => {
+            let writer = csv::WriterBuilder::new()
+                .has_headers(false)
+                .from_path(file_path)
+                .map_err(|e| e.to_string())?;
+
+            Some(writer)
+        }
+        None => None,
+    };
+
+    *glove_process.raw_output_writer.lock().await = writer;
+
+    Ok(file_path)
 }
