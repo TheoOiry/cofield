@@ -6,7 +6,6 @@ COFIELD - for COmmunication with FIngers from Lucid Dreaming (we forgot what the
 
 This is still a work-in-progress, but you can already build and implement the device yourself.
 
-
 ## Why this new method of communication ?
 
 The dream phase of sleep is characterized by the inhibition (or atonia) of all the muscles of the body. All of them ? No, the eye and face muscles keep some of their tonicity during the dream phase.
@@ -52,6 +51,7 @@ Materials:
 
 The device is a glove with an Arduino Nano ESP32 board connected to five flexion sensors.
 
+<<<<<<< HEAD
 We HIGHLY encourage you to solder all the components and not use a test breadboard.
 
 The board is put on the glove with velcro.
@@ -61,4 +61,32 @@ As for the flex sensors we tried different methods to implement them but the one
 We used an external battery to aliment it, that can be attached to the arm with a wrist band.
 
 ![electronics]("./assets/electronics.webp")
+=======
+### Installation on the ESP32
+>>>>>>> 64c728f (doc: add arduino install doc)
 
+#### Install the ESP32 board support in Arduino IDE
+
+1. Install and open [**Arduino IDE**](https://www.arduino.cc/en/software/)
+2. Go to **File → Preferences**
+3. In **Additional Boards Manager URLs**, add:
+
+```sh
+https://espressif.github.io/arduino-esp32/package_esp32_index.json
+```
+
+4. Open **Tools → Board → Boards Manager**
+5. Search for **ESP32**
+6. Install **esp32 by Espressif Systems**
+
+#### Upload the firmware to your ESP32
+
+1. Connect your ESP32 via USB
+2. Go to **Tools → Board** and choose: ESP32 Dev Module
+select the correct USB port under **Tools → Port**.
+3. Copy the code under `/arduino/output_glove.ino` from this repository into a new `.ino` file in Arduino IDE  
+4. Click **Upload**
+
+After the upload completes, you can now install the app trough the [releases](https://github.com/TheoOiry/cofield/releases/latest) and you're now ready to dream!
+
+![image of the cofield desktop app](./assets/app.webp)
