@@ -28,13 +28,14 @@ The only study we know of that tried to detect voluntary finger movements during
 
 Also we conducted pilots to test our device and we definitely observed and captured voluntary movement of all the fingers independently ! (we may publish recordings with proofs in the future but for now you can try it yourself if you want to be convinced)
 
+---
 
 ## How to Do It Yourself !
 
 ### The sensor glove
 
-![glove_top]("./assets/glove_top.webp")
-![glove_bottom]("./assets/glove_bottom.webp")
+![glove_top](./assets/glove_top.webp)
+![glove_bottom](./assets/glove_bottom.webp)
 
 Materials:
 - Arduino Nano ESP32 board
@@ -51,7 +52,6 @@ Materials:
 
 The device is a glove with an Arduino Nano ESP32 board connected to five flexion sensors.
 
-<<<<<<< HEAD
 We HIGHLY encourage you to solder all the components and not use a test breadboard.
 
 The board is put on the glove with velcro.
@@ -60,10 +60,11 @@ As for the flex sensors we tried different methods to implement them but the one
 
 We used an external battery to aliment it, that can be attached to the arm with a wrist band.
 
-![electronics]("./assets/electronics.webp")
-=======
+![electronics](./assets/electronics.webp)
+
+---
+
 ### Installation on the ESP32
->>>>>>> 64c728f (doc: add arduino install doc)
 
 #### Install the ESP32 board support in Arduino IDE
 
