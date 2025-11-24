@@ -1,6 +1,6 @@
 # COFIELD
 
-Welcome to the COFIELD project !
+Welcome to the **COFIELD** project !
 
 COFIELD - for COmmunication with FIngers from Lucid Dreaming (we forgot what the 'E' means...) - is a project aimed at developing a new method of communication from lucid dreaming - as you may have guessed, with finger movements - and make it as accessible as possible, with low-cost DIY hardware and open-source software.
 
@@ -34,8 +34,7 @@ Also we conducted pilots to test our device and we definitely observed and captu
 
 ### The sensor glove
 
-![glove_top](./assets/glove_top.webp)
-![glove_bottom](./assets/glove_bottom.webp)
+![glove](./assets/glove.webp)
 
 Materials:
 - Arduino Nano ESP32 board
@@ -52,7 +51,7 @@ Materials:
 
 The device is a glove with an Arduino Nano ESP32 board connected to five flexion sensors.
 
-We HIGHLY encourage you to solder all the components and not use a test breadboard.
+We **HIGHLY** encourage you to solder all the components and not use a test breadboard.
 
 The board is put on the glove with velcro.
 
