@@ -120,7 +120,6 @@ const ProcessConfigProvider: React.FC<{ children: ReactNode }> = ({
       setIsRecording(res !== null);
     } catch (err) {
       toast.error(`Failed to start recording: ${err}`);
-      // TODO: toast error
     }
   };
 
