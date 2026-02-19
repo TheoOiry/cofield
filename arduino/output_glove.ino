@@ -3,10 +3,15 @@
 #include <BLEUtils.h>
 #include <BLE2902.h>
 #include <BLE2901.h>
+#include <Wire.h>
+#include <ADS1X15.h>
 
 BLEServer *pServer = NULL;
 BLECharacteristic *pCharacteristic = NULL;
 BLE2901 *descriptor_2901 = NULL;
+
+ADS1115 ads_48(0x48);
+ADS1115 ads_49(0x49);
 
 const int PERIOD = 20;
 
@@ -35,6 +40,24 @@ class MyServerCallbacks : public BLEServerCallbacks {
 void setup() {
   Serial.begin(115200);
 
+  Wire.begin();
+
+  if (!ads_48.begin()) {
+    Serial.println("ADS1115 0x48 not found!");
+  }
+
+  if (!ads_49.begin()) {
+    Serial.println("ADS1115 0x49 not found!");
+  }
+
+  ads_48.setGain(4);
+  ads_48.setDataRate(4);
+  ads_48.setMode(1);
+
+  ads_49.setGain(4);
+  ads_49.setDataRate(4);
+  ads_49.setMode(1);
+
   BLEDevice::init(BLE_DEVICE_NAME);
 
   pServer = BLEDevice::createServer();
@@ -44,7 +67,7 @@ void setup() {
 
   pCharacteristic = pService->createCharacteristic(
     CHARACTERISTIC_UUID,
-    BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY
+    BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_INDICATE
   );
 
   pCharacteristic->addDescriptor(new BLE2902());
@@ -96,17 +119,24 @@ void loop() {
 uint8_t* readSensors() {
   static uint8_t buffer[14];
 
-  for (int i = 0; i < 5; i++) {
-    uint16_t sensorValue = analogRead(A0 + i);
+  int16_t values[5];
 
-    buffer[i * 2] = (uint8_t)(sensorValue & 0xff);
-    buffer[i * 2 + 1] = (uint8_t)(sensorValue >> 8);
+  values[0] = ads_48.readADC_Differential_3_2();
+  values[1] = ads_48.readADC_Differential_3_1();
+  values[2] = ads_48.readADC_Differential_3_0();
+
+  values[3] = ads_49.readADC_Differential_3_2();
+  values[4] = ads_49.readADC_Differential_3_1();
+
+  for (int i = 0; i < 5; i++) {
+    buffer[i * 2]     = (uint8_t)(values[i] & 0xFF);
+    buffer[i * 2 + 1] = (uint8_t)((values[i] >> 8) & 0xFF);
   }
 
   unsigned long timeStamp = millis();
-  buffer[10] = (uint8_t)(timeStamp & 0xff);         
-  buffer[11] = (uint8_t)((timeStamp >> 8) & 0xff);  
-  buffer[12] = (uint8_t)((timeStamp >> 16) & 0xff); 
+  buffer[10] = (uint8_t)(timeStamp & 0xff);
+  buffer[11] = (uint8_t)((timeStamp >> 8) & 0xff);
+  buffer[12] = (uint8_t)((timeStamp >> 16) & 0xff);
   buffer[13] = (uint8_t)((timeStamp >> 24) & 0xff);
 
   return buffer;

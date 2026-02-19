@@ -12,24 +12,24 @@ use crate::opt::FingersSensibility;
 pub type MovingFingers = [bool; 5];
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize)]
-pub struct FingersFlexValues(pub [u32; 5]);
+pub struct FingersFlexValues(pub [i32; 5]);
 
 impl FingersFlexValues {
     pub fn detect_moved_fingers(&self, sensibility: &FingersSensibility) -> MovingFingers {
         let mut moved_fingers = [false; 5];
 
         self.0.iter().enumerate().for_each(|(i, &value)| {
-            moved_fingers[i] = value > sensibility.0[i];
+            moved_fingers[i] = value.abs() > sensibility.0[i] as i32;
         });
 
         moved_fingers
     }
 }
 
-impl Div<u32> for FingersFlexValues {
+impl Div<i32> for FingersFlexValues {
     type Output = Self;
 
-    fn div(self, rhs: u32) -> Self {
+    fn div(self, rhs: i32) -> Self {
         let mut result = FingersFlexValues([0; 5]);
         for i in 0..5 {
             result.0[i] = self.0[i] / rhs;
@@ -83,7 +83,7 @@ impl FlexSensorGloveNotification {
     pub fn from_buffer(buffer: &[u8], dt_start: DateTime<Local>) -> Self {
         let mut flex_values = [0; 5];
         for i in 0..5 {
-            flex_values[i] = u16::from_le_bytes([buffer[i * 2], buffer[i * 2 + 1]]) as u32;
+            flex_values[i] = i16::from_le_bytes([buffer[i * 2], buffer[i * 2 + 1]]) as i32;
         }
 
         let millis = u32::from_le_bytes([buffer[10], buffer[11], buffer[12], buffer[13]]);

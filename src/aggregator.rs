@@ -33,7 +33,7 @@ impl MeanAggregator {
     }
 
     fn aggregate_rows(&self) -> FlexSensorGloveNotification {
-        let len = self.rows.len() as u32;
+        let len = self.rows.len() as i32;
         let last_row = &self.rows[self.rows.len() - 1];
 
         let mut flex_values: FingersFlexValues = self.rows.iter().map(|row| row.flex_values).sum();
