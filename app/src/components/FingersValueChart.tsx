@@ -90,7 +90,7 @@ const FingersValueChart: React.FC<FingersValueChartProps> = ({}) => {
       dataset={dataset}
       series={SERIES}
       xAxis={[{ scaleType: "time", dataKey: "dt" }]}
-      yAxis={[{ min: 0, max: 1000 }]}
+      yAxis={[{ min: -32767, max: 32767 }]}
     >
       <ChartsReferenceLine
         y={200}
