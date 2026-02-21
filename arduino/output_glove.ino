@@ -85,10 +85,6 @@ void setup() {
   pAdvertising->setMinPreferred(0x0);
   BLEDevice::startAdvertising();
 
-  for (int i = 0; i < 5; i++) {
-    pinMode(A0 + i, INPUT);
-  }
-
   Serial.println("Waiting a client connection to notify...");
 }
 
@@ -121,12 +117,12 @@ uint8_t* readSensors() {
 
   int16_t values[5];
 
-  values[0] = ads_48.readADC_Differential_3_2();
-  values[1] = ads_48.readADC_Differential_3_1();
-  values[2] = ads_48.readADC_Differential_3_0();
+  values[0] = ads_48.readADC_Differential_2_3();
+  values[1] = ads_48.readADC_Differential_1_3();
+  values[2] = ads_48.readADC_Differential_0_3();
 
-  values[3] = ads_49.readADC_Differential_3_2();
-  values[4] = ads_49.readADC_Differential_3_1();
+  values[3] = ads_49.readADC_Differential_2_3();
+  values[4] = ads_49.readADC_Differential_1_3();
 
   for (int i = 0; i < 5; i++) {
     buffer[i * 2]     = (uint8_t)(values[i] & 0xFF);
