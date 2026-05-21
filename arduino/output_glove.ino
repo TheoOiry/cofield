@@ -5,6 +5,8 @@
 #include <BLE2901.h>
 #include <Wire.h>
 #include <ADS1X15.h>
+#include "I2Cdev.h"
+#include "MPU6050.h"
 
 BLEServer *pServer = NULL;
 BLECharacteristic *pCharacteristic = NULL;
@@ -12,6 +14,11 @@ BLE2901 *descriptor_2901 = NULL;
 
 ADS1115 ads_48(0x48);
 ADS1115 ads_49(0x49);
+
+MPU6050 mpu6050;
+
+#define TCA9548A_ADDR 0x70
+#define NUM_IMUS 5
 
 const int PERIOD = 20;
 
@@ -37,6 +44,12 @@ class MyServerCallbacks : public BLEServerCallbacks {
   }
 };
 
+void selectMuxChannel(uint8_t channel) {
+  Wire.beginTransmission(TCA9548A_ADDR);
+  Wire.write(1 << channel);
+  Wire.endTransmission();
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -58,7 +71,18 @@ void setup() {
   ads_49.setDataRate(4);
   ads_49.setMode(1);
 
+  for (int i = 0; i < NUM_IMUS; i++) {
+    selectMuxChannel(i);
+    mpu6050.initialize();
+    delay(100);
+    if (!mpu6050.testConnection()) {
+      Serial.print("MPU6050 not found on mux channel ");
+      Serial.println(i);
+    }
+  }
+
   BLEDevice::init(BLE_DEVICE_NAME);
+  BLEDevice::setMTU(128);
 
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
@@ -96,7 +120,7 @@ void loop() {
       startMillis = millis();
     }
 
-    pCharacteristic->setValue(readSensors(), 14);
+    pCharacteristic->setValue(readSensors(), 74);
     pCharacteristic->notify();
   }
     
@@ -113,7 +137,7 @@ void loop() {
 }
 
 uint8_t* readSensors() {
-  static uint8_t buffer[14];
+  static uint8_t buffer[74];
 
   int16_t values[5];
 
@@ -129,11 +153,24 @@ uint8_t* readSensors() {
     buffer[i * 2 + 1] = (uint8_t)((values[i] >> 8) & 0xFF);
   }
 
+  int16_t ax, ay, az, gx, gy, gz;
+  for (int i = 0; i < NUM_IMUS; i++) {
+    selectMuxChannel(i);
+    mpu6050.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+    int offset = 10 + i * 12;
+    int16_t axes[6] = { ax, ay, az, gx, gy, gz };
+    for (int j = 0; j < 6; j++) {
+      buffer[offset + j * 2]     = (uint8_t)(axes[j] & 0xFF);
+      buffer[offset + j * 2 + 1] = (uint8_t)((axes[j] >> 8) & 0xFF);
+    }
+  }
+
   unsigned long timeStamp = millis();
-  buffer[10] = (uint8_t)(timeStamp & 0xff);
-  buffer[11] = (uint8_t)((timeStamp >> 8) & 0xff);
-  buffer[12] = (uint8_t)((timeStamp >> 16) & 0xff);
-  buffer[13] = (uint8_t)((timeStamp >> 24) & 0xff);
+  buffer[70] = (uint8_t)(timeStamp & 0xff);
+  buffer[71] = (uint8_t)((timeStamp >> 8) & 0xff);
+  buffer[72] = (uint8_t)((timeStamp >> 16) & 0xff);
+  buffer[73] = (uint8_t)((timeStamp >> 24) & 0xff);
 
   return buffer;
 }

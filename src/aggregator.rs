@@ -1,4 +1,4 @@
-use crate::parser::{FingersFlexValues, FlexSensorGloveNotification};
+use crate::parser::{FingersFlexValues, FlexSensorGloveNotification, ImuValues};
 
 pub struct MeanAggregator {
     rows: Vec<FlexSensorGloveNotification>,
@@ -39,9 +39,13 @@ impl MeanAggregator {
         let mut flex_values: FingersFlexValues = self.rows.iter().map(|row| row.flex_values).sum();
         flex_values = last_row.flex_values - (flex_values / len);
 
+        let mut imu_values: ImuValues = self.rows.iter().map(|row| row.imu_values).sum();
+        imu_values = last_row.imu_values - (imu_values / len);
+
         FlexSensorGloveNotification {
             dt: last_row.dt,
             flex_values,
+            imu_values,
         }
     }
 

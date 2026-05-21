@@ -18,8 +18,11 @@ impl Display for OutputRow<'_> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(
             f,
-            "{}: values: {:?}, moving: {:?}",
-            self.notification.dt, self.notification.flex_values, self.moving_fingers
+            "{}: flex: {:?}, moving: {:?}, imu: {:?}",
+            self.notification.dt,
+            self.notification.flex_values,
+            self.moving_fingers,
+            self.notification.imu_values
         )
     }
 }

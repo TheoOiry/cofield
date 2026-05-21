@@ -3,6 +3,11 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 
 export type Fingers<T> = [T, T, T, T, T];
 
+export interface ImuReading {
+  acc: [number, number, number];
+  gyro: [number, number, number];
+}
+
 export interface NotificationPayload {
   notification: FingersNotification;
   movedFingers: Fingers<boolean>;
@@ -11,6 +16,7 @@ export interface NotificationPayload {
 export interface FingersNotification {
   dt: string;
   flexValues: Fingers<number>;
+  imuValues: Fingers<ImuReading>;
 }
 
 export interface GloveDataContextProps {
